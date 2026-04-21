@@ -1,0 +1,251 @@
+export type OrderStatus =
+  | 'Paid'
+  | 'Delivered'
+  | 'Pending'
+  | 'Completed'
+  | 'Cancelled'
+
+export type PaymentMethod =
+  | 'Credit Card'
+  | 'Mobile Banking'
+  | 'Cash on Delivery'
+  | 'PayPal'
+
+export type OrderRecord = {
+  key: string
+  sl: string
+  orderId: string
+  customerName: string
+  vendor: string
+  amount: number
+  time: string
+  placedAt: string
+  status: OrderStatus
+  paymentMethod: PaymentMethod
+  items: number
+  shippingAddress: string
+  notes?: string
+}
+
+export const ORDER_STATUSES: OrderStatus[] = [
+  'Paid',
+  'Delivered',
+  'Pending',
+  'Completed',
+  'Cancelled',
+]
+
+export const initialOrders: OrderRecord[] = [
+  {
+    key: '1',
+    sl: '01',
+    orderId: 'ORD-7721',
+    customerName: 'Alex Johnson',
+    vendor: 'Solaris Energy',
+    amount: 160.0,
+    time: '10 mins ago',
+    placedAt: '27 Oct 2025, 14:12',
+    status: 'Paid',
+    paymentMethod: 'Credit Card',
+    items: 2,
+    shippingAddress: '12 Banani Ave, Dhaka, Bangladesh',
+  },
+  {
+    key: '2',
+    sl: '02',
+    orderId: 'ORD-7722',
+    customerName: 'Maria Chen',
+    vendor: 'GreenTech Solutions',
+    amount: 245.5,
+    time: '5 mins ago',
+    placedAt: '27 Oct 2025, 14:17',
+    status: 'Delivered',
+    paymentMethod: 'Mobile Banking',
+    items: 3,
+    shippingAddress: '45 Mirpur Rd, Dhaka, Bangladesh',
+    notes: 'Leave at reception desk.',
+  },
+  {
+    key: '3',
+    sl: '03',
+    orderId: 'ORD-7723',
+    customerName: "Liam O'Reilly",
+    vendor: 'BlueWave Corp',
+    amount: 320.75,
+    time: '15 mins ago',
+    placedAt: '27 Oct 2025, 14:07',
+    status: 'Pending',
+    paymentMethod: 'PayPal',
+    items: 1,
+    shippingAddress: '8 Port Road, Chittagong, Bangladesh',
+  },
+  {
+    key: '4',
+    sl: '04',
+    orderId: 'ORD-7724',
+    customerName: 'Nina Patel',
+    vendor: 'EcoSphere Innovations',
+    amount: 450.0,
+    time: '20 mins ago',
+    placedAt: '27 Oct 2025, 14:02',
+    status: 'Completed',
+    paymentMethod: 'Credit Card',
+    items: 5,
+    shippingAddress: '221 Kemal Ataturk Ave, Dhaka',
+  },
+  {
+    key: '5',
+    sl: '05',
+    orderId: 'ORD-7725',
+    customerName: 'David Kim',
+    vendor: 'QuantumTech',
+    amount: 185.0,
+    time: '2 mins ago',
+    placedAt: '27 Oct 2025, 14:20',
+    status: 'Paid',
+    paymentMethod: 'Credit Card',
+    items: 2,
+    shippingAddress: '17 Gulshan 2, Dhaka',
+  },
+  {
+    key: '6',
+    sl: '06',
+    orderId: 'ORD-7726',
+    customerName: 'Sofia Martinez',
+    vendor: 'Nexus Dynamics',
+    amount: 290.25,
+    time: '7 mins ago',
+    placedAt: '27 Oct 2025, 14:15',
+    status: 'Pending',
+    paymentMethod: 'Mobile Banking',
+    items: 3,
+    shippingAddress: '5 Dhanmondi 32, Dhaka',
+  },
+  {
+    key: '7',
+    sl: '07',
+    orderId: 'ORD-7727',
+    customerName: 'Rakib Hossain',
+    vendor: 'Urban Bites',
+    amount: 65.5,
+    time: '25 mins ago',
+    placedAt: '27 Oct 2025, 13:57',
+    status: 'Completed',
+    paymentMethod: 'Cash on Delivery',
+    items: 4,
+    shippingAddress: '92 Uttara Sector 4, Dhaka',
+  },
+  {
+    key: '8',
+    sl: '08',
+    orderId: 'ORD-7728',
+    customerName: 'Tania Rahman',
+    vendor: 'Nova Fashion',
+    amount: 175.9,
+    time: '30 mins ago',
+    placedAt: '27 Oct 2025, 13:52',
+    status: 'Delivered',
+    paymentMethod: 'Credit Card',
+    items: 2,
+    shippingAddress: '34 Elephant Road, Dhaka',
+  },
+  {
+    key: '9',
+    sl: '09',
+    orderId: 'ORD-7729',
+    customerName: 'Imran Chowdhury',
+    vendor: 'Vital Health',
+    amount: 99.0,
+    time: '45 mins ago',
+    placedAt: '27 Oct 2025, 13:37',
+    status: 'Cancelled',
+    paymentMethod: 'Mobile Banking',
+    items: 1,
+    shippingAddress: '2 Panthapath, Dhaka',
+    notes: 'Cancelled by customer — refund issued.',
+  },
+  {
+    key: '10',
+    sl: '10',
+    orderId: 'ORD-7730',
+    customerName: 'Mousumi Akter',
+    vendor: 'SparkCraft',
+    amount: 58.0,
+    time: '1 hour ago',
+    placedAt: '27 Oct 2025, 13:22',
+    status: 'Paid',
+    paymentMethod: 'PayPal',
+    items: 3,
+    shippingAddress: '9 Gulshan 1, Dhaka',
+  },
+  {
+    key: '11',
+    sl: '11',
+    orderId: 'ORD-7731',
+    customerName: 'Sabbir Khan',
+    vendor: 'Bright Path Education',
+    amount: 450.0,
+    time: '2 hours ago',
+    placedAt: '27 Oct 2025, 12:22',
+    status: 'Pending',
+    paymentMethod: 'Credit Card',
+    items: 1,
+    shippingAddress: 'Online delivery',
+  },
+  {
+    key: '12',
+    sl: '12',
+    orderId: 'ORD-7732',
+    customerName: 'Oishee Das',
+    vendor: 'Trailblaze Travel',
+    amount: 1250.0,
+    time: '3 hours ago',
+    placedAt: '27 Oct 2025, 11:22',
+    status: 'Completed',
+    paymentMethod: 'Credit Card',
+    items: 1,
+    shippingAddress: "Cox's Bazar Hotel pickup",
+  },
+  {
+    key: '13',
+    sl: '13',
+    orderId: 'ORD-7733',
+    customerName: 'Arman Karim',
+    vendor: 'Skyline Ventures',
+    amount: 820.0,
+    time: '4 hours ago',
+    placedAt: '27 Oct 2025, 10:22',
+    status: 'Paid',
+    paymentMethod: 'Mobile Banking',
+    items: 1,
+    shippingAddress: '101 Kakrail, Dhaka',
+  },
+  {
+    key: '14',
+    sl: '14',
+    orderId: 'ORD-7734',
+    customerName: 'Hasib Ali',
+    vendor: 'CityRide',
+    amount: 42.25,
+    time: '5 hours ago',
+    placedAt: '27 Oct 2025, 09:22',
+    status: 'Delivered',
+    paymentMethod: 'Cash on Delivery',
+    items: 1,
+    shippingAddress: '15 Agrabad, Chittagong',
+  },
+  {
+    key: '15',
+    sl: '15',
+    orderId: 'ORD-7735',
+    customerName: 'Rafi Islam',
+    vendor: 'Neon Beats',
+    amount: 9.99,
+    time: '6 hours ago',
+    placedAt: '27 Oct 2025, 08:22',
+    status: 'Paid',
+    paymentMethod: 'PayPal',
+    items: 1,
+    shippingAddress: 'Digital subscription',
+  },
+]
