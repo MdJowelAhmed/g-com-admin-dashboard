@@ -14,13 +14,13 @@ export default function CheckEmail() {
 
   return (
     <AuthLayout
-      illustration={<AuthIllustration alt="Check email illustration" />}
+      illustration={<AuthIllustration src="/assets/check.png" alt="Check email illustration" />}
     >
       <AuthCard
         title="Check your email"
         description={`We sent a password reset link to ${email}`}
       >
-        <PrimaryButton type="button">Open email app</PrimaryButton>
+        <PrimaryButton type="button" onClick={() => window.open('mailto:' + email)}>Open email app</PrimaryButton>
 
         <p className="mt-5 text-center text-sm text-gray-400">
           Didn't receive the email?{' '}

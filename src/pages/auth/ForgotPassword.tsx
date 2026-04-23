@@ -13,12 +13,12 @@ export default function ForgotPassword() {
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
-    navigate('/check-email', { state: { email } })
+    navigate('/otp', { state: { email } })
   }
 
   return (
     <AuthLayout
-      illustration={<AuthIllustration alt="Forgot password illustration" />}
+      illustration={<AuthIllustration src="/assets/forgot.png" alt="Forgot password illustration" />}
     >
       <AuthCard
         title="Forgot password?"
