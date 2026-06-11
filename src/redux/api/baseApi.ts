@@ -50,6 +50,7 @@ export const baseApi = createApi({
   'CompanyProjects',
   'Promotions',
   'Users',
+  'Controllers',
 ],
   
    

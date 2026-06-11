@@ -1,22 +1,47 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { message, Spin } from 'antd'
 import { Plus } from 'lucide-react'
 import ControllersTable from '../../components/dashboard/ControllersTable'
 import ControllerFormModal, {
   type ControllerFormState,
 } from '../../components/dashboard/ControllerFormModal'
+import { type Controller } from '../../data/controllerData'
 import {
-  initialControllers,
-  nextControllerKey,
-  type Controller,
-} from '../../data/controllerData'
+  mapControllerFromApi,
+  permissionsToApi,
+  useCreateControllerMutation,
+  useDeleteControllerMutation,
+  useGetControllersQuery,
+  useUpdateControllerMutation,
+} from '../../redux/api/controllerApi'
+
+function toControllerPayload(form: ControllerFormState) {
+  return {
+    name: form.name.trim(),
+    email: form.email.trim(),
+    permissions: permissionsToApi(form.pageAccess),
+  }
+}
 
 export default function ControllerManagement() {
-  const [controllers, setControllers] =
-    useState<Controller[]>(initialControllers)
   const [formState, setFormState] = useState<{
     open: boolean
     controller: Controller | null
   }>({ open: false, controller: null })
+
+  const { data, isLoading, isError } = useGetControllersQuery({})
+  const [createController, { isLoading: isCreating }] =
+    useCreateControllerMutation()
+  const [updateController, { isLoading: isUpdating }] =
+    useUpdateControllerMutation()
+  const [deleteController] = useDeleteControllerMutation()
+
+  const isSubmitting = isCreating || isUpdating
+
+  const controllers = useMemo(
+    () => (data?.data ?? []).map(mapControllerFromApi),
+    [data],
+  )
 
   const openCreate = () =>
     setFormState({ open: true, controller: null })
@@ -24,42 +49,51 @@ export default function ControllerManagement() {
   const openEdit = (controller: Controller) =>
     setFormState({ open: true, controller })
 
-  const closeForm = () =>
+  const closeForm = () => {
+    if (isSubmitting) return
     setFormState({ open: false, controller: null })
-
-  const handleSubmit = (data: ControllerFormState) => {
-    if (formState.controller) {
-      setControllers((prev) =>
-        prev.map((c) =>
-          c.key === formState.controller!.key ? { ...c, ...data } : c,
-        ),
-      )
-      return
-    }
-
-    setControllers((prev) => {
-      const sl = String(prev.length + 1).padStart(2, '0')
-      return [
-        ...prev,
-        {
-          key: nextControllerKey(),
-          sl,
-          name: data.name,
-          email: data.email,
-          pageAccess: data.pageAccess,
-          suspended: false,
-        },
-      ]
-    })
   }
 
-  const handleDelete = (key: string) =>
-    setControllers((prev) => prev.filter((c) => c.key !== key))
+  const handleSubmit = async (form: ControllerFormState) => {
+    const payload = toControllerPayload(form)
 
-  const handleToggleSuspended = (key: string, next: boolean) =>
-    setControllers((prev) =>
-      prev.map((c) => (c.key === key ? { ...c, suspended: next } : c)),
-    )
+    try {
+      if (formState.controller) {
+        const result = await updateController({
+          id: formState.controller.key,
+          body: payload,
+        }).unwrap()
+        message.success(result.message || 'Controller updated successfully.')
+      } else {
+        const result = await createController(payload).unwrap()
+        message.success(result.message || 'Controller created successfully.')
+      }
+      setFormState({ open: false, controller: null })
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : formState.controller
+            ? 'Failed to update controller.'
+            : 'Failed to create controller.'
+      message.error(errorMessage)
+    }
+  }
+
+  const handleDelete = async (key: string) => {
+    try {
+      const result = await deleteController(key).unwrap()
+      message.success(result.message || 'Controller deleted successfully.')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to delete controller.'
+      message.error(errorMessage)
+    }
+  }
+
+  const handleToggleSuspended = (_key: string, _next: boolean) => {
+    message.info('Suspend/reactivate is not available yet.')
+  }
 
   return (
     <div className="py-6">
@@ -85,12 +119,22 @@ export default function ControllerManagement() {
         </header>
 
         <div className="mt-6">
-          <ControllersTable
-            data={controllers}
-            onEdit={openEdit}
-            onDelete={handleDelete}
-            onToggleSuspended={handleToggleSuspended}
-          />
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <Spin size="large" />
+            </div>
+          ) : isError ? (
+            <p className="py-10 text-center text-sm text-red-400">
+              Failed to load controllers. Please try again.
+            </p>
+          ) : (
+            <ControllersTable
+              data={controllers}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onToggleSuspended={handleToggleSuspended}
+            />
+          )}
         </div>
       </section>
 
@@ -99,6 +143,7 @@ export default function ControllerManagement() {
         controller={formState.controller}
         onClose={closeForm}
         onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
       />
     </div>
   )

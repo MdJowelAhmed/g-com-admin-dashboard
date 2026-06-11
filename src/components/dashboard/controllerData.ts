@@ -1,16 +1,12 @@
 export const PAGE_PERMISSIONS = [
-  'Dashboard Overview',
-  'Home Control',
-  'Shop Management',
+  'Dashboard',
   'User Management',
-  'Order Management',
-  'Earning & Payouts',
-  'Event Management',
-  'Controller Management',
-  'Messages',
+  'Business Management',
+  'Categories',
+  'Payments',
   'Settings',
-  'Terms & Conditions',
-  'Privacy Policy',
+  'Support',
+  'Promotions',
 ] as const
 
 export type PagePermission = (typeof PAGE_PERMISSIONS)[number]
@@ -33,7 +29,7 @@ export const initialControllers: Controller[] = [
     sl: '01',
     name: 'sabbir ahmed',
     email: 'asabbir724@gmail.com',
-    pageAccess: ['Shop Management', 'Order Management'],
+    pageAccess: ['Business Management', 'Payments'],
     suspended: false,
   },
   {
@@ -41,7 +37,7 @@ export const initialControllers: Controller[] = [
     sl: '02',
     name: 'lina martinez',
     email: 'lina.martinez@gmail.com',
-    pageAccess: ['Event Management', 'Home Control', 'Settings'],
+    pageAccess: ['Promotions', 'Dashboard', 'Settings'],
     suspended: false,
   },
   {
@@ -49,7 +45,7 @@ export const initialControllers: Controller[] = [
     sl: '03',
     name: 'omar farouk',
     email: 'omar.farouk@yahoo.com',
-    pageAccess: ['Earning & Payouts', 'Order Management'],
+    pageAccess: ['Payments', 'Categories'],
     suspended: true,
   },
   {
@@ -57,28 +53,7 @@ export const initialControllers: Controller[] = [
     sl: '04',
     name: 'maya chen',
     email: 'maya.chen@outlook.com',
-    pageAccess: ['User Management', 'Dashboard Overview'],
-    suspended: false,
-  },
-  {
-    key: '5',
-    sl: '05',
-    name: "james o'neil",
-    email: 'james.oneil@gmail.com',
-    pageAccess: ['Shop Management', 'Order Management', 'Earning & Payouts'],
-    suspended: false,
-  },
-  {
-    key: '6',
-    sl: '06',
-    name: 'anita singh',
-    email: 'anita.singh@mail.com',
-    pageAccess: [
-      'Dashboard Overview',
-      'User Management',
-      'Event Management',
-      'Messages',
-    ],
+    pageAccess: ['User Management', 'Dashboard'],
     suspended: false,
   },
 ]

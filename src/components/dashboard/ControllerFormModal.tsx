@@ -30,7 +30,8 @@ type Props = {
   open: boolean
   controller: Controller | null
   onClose: () => void
-  onSubmit: (data: ControllerFormState) => void
+  onSubmit: (data: ControllerFormState) => void | Promise<void>
+  isSubmitting?: boolean
 }
 
 export default function ControllerFormModal({
@@ -38,6 +39,7 @@ export default function ControllerFormModal({
   controller,
   onClose,
   onSubmit,
+  isSubmitting = false,
 }: Props) {
   const [form, setForm] = useState<ControllerFormState>(blankState)
 
@@ -65,10 +67,9 @@ export default function ControllerFormModal({
           : [...PAGE_PERMISSIONS],
     }))
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    onSubmit(form)
-    onClose()
+    await onSubmit(form)
   }
 
   const allSelected = form.pageAccess.length === PAGE_PERMISSIONS.length
@@ -112,6 +113,7 @@ export default function ControllerFormModal({
                 placeholder="Sabbir Ahmed"
                 className={controlClass}
                 required
+                disabled={isSubmitting}
               />
             </FormControl>
 
@@ -125,6 +127,7 @@ export default function ControllerFormModal({
                 placeholder="rpsabbir.ahmed@gmail.com"
                 className={controlClass}
                 required
+                disabled={isSubmitting}
               />
             </FormControl>
 
@@ -137,7 +140,8 @@ export default function ControllerFormModal({
                 <button
                   type="button"
                   onClick={toggleAll}
-                  className="text-xs font-medium text-accent-amber hover:underline"
+                  disabled={isSubmitting}
+                  className="text-xs font-medium text-accent-amber hover:underline disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {allSelected ? 'Clear all' : 'Select all'}
                 </button>
@@ -160,6 +164,7 @@ export default function ControllerFormModal({
                           type="checkbox"
                           checked={checked}
                           onChange={() => togglePermission(perm)}
+                          disabled={isSubmitting}
                           className="sr-only"
                         />
                         <span
@@ -203,16 +208,23 @@ export default function ControllerFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-10 rounded-md border border-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand/10"
+            disabled={isSubmitting}
+            className="h-10 rounded-md border border-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
           <button
             type="submit"
-            disabled={form.pageAccess.length === 0}
+            disabled={isSubmitting || form.pageAccess.length === 0}
             className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isEdit ? 'Save Changes' : 'Create Controller'}
+            {isSubmitting
+              ? isEdit
+                ? 'Saving...'
+                : 'Creating...'
+              : isEdit
+                ? 'Save Changes'
+                : 'Create Controller'}
           </button>
         </footer>
       </form>
