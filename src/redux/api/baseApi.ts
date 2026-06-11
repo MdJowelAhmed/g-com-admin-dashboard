@@ -52,6 +52,7 @@ export const baseApi = createApi({
   'Users',
   'Controllers',
   'Events',
+  'Shops',
 ],
   
    

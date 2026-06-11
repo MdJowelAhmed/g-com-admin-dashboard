@@ -1,6 +1,17 @@
 // Canonical location for all shop-related mock data and types.
 export type ShopStatus = 'Pending' | 'Verified' | 'In Review' | 'Suspended'
 
+export type ShopVerification = {
+  id: string
+  user: string
+  businessProof: string
+  verificationDocumentType: string
+  verificationDocument: string
+  status: 'pending' | 'approved' | 'rejected'
+  createdAt: string
+  updatedAt: string
+}
+
 export type Shop = {
   key: string
   sl: string
@@ -15,21 +26,17 @@ export type Shop = {
   phone: string
   address: string
   description: string
+  businessLogo?: string
+  coverImage?: string
+  isBusinessVerified: boolean
+  verification?: ShopVerification[]
 }
 
 export const SHOP_TYPES = [
-  'Finance',
-  'Agriculture',
-  'Technology',
-  'Environmental',
-  'Food & Beverage',
-  'Education',
-  'Healthcare',
-  'Retail',
-  'Transport',
-  'Manufacturing',
-  'Entertainment',
-  'Tourism',
+  'Shop',
+  'Services',
+  'Stay',
+  'Event',
 ] as const
 
 export const SHOP_STATUSES: ShopStatus[] = [

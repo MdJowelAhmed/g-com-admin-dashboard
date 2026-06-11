@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { message, Spin } from 'antd'
 import { CheckCircle, Clock, Search, ShieldX, Store } from 'lucide-react'
 import StatCard from '../../components/dashboard/StatCard'
 import ShopsTable from '../../components/dashboard/ShopsTable'
@@ -7,34 +8,50 @@ import ShopFilter, {
   EMPTY_FILTER,
   type FilterState,
 } from '../../components/dashboard/ShopFilter'
-import { useFilteredList } from '../../hooks/useFilteredList'
 import { type Shop } from '../../data/shopData'
-import { getInitialShops } from '../../services/mock/dashboardDataService'
+import {
+  mapShopFromApi,
+  useGetShopsQuery,
+  useUpdateShopStatusMutation,
+} from '../../redux/api/shopManagementApi'
+
+function filterShops(shops: Shop[], query: string, activeFilter: FilterState) {
+  return shops.filter((shop) => {
+    if (query) {
+      const haystack =
+        `${shop.name} ${shop.shopId} ${shop.type} ${shop.category}`.toLowerCase()
+      if (!haystack.includes(query)) return false
+    }
+    if (
+      activeFilter.statuses.length &&
+      !activeFilter.statuses.includes(shop.status)
+    ) {
+      return false
+    }
+    if (activeFilter.types.length && !activeFilter.types.includes(shop.type)) {
+      return false
+    }
+    return true
+  })
+}
 
 export default function ShopManagement() {
-  const { data: shops, setData: setShops, query, setQuery, filter, setFilter, filtered } =
-    useFilteredList<Shop, FilterState>({
-      initialData: getInitialShops(),
-      emptyFilter: EMPTY_FILTER,
-      filterFn: (shop, q, activeFilter) => {
-        if (q) {
-          const haystack =
-            `${shop.name} ${shop.shopId} ${shop.type} ${shop.category}`.toLowerCase()
-          if (!haystack.includes(q)) return false
-        }
-        if (
-          activeFilter.statuses.length &&
-          !activeFilter.statuses.includes(shop.status)
-        ) {
-          return false
-        }
-        if (activeFilter.types.length && !activeFilter.types.includes(shop.type)) {
-          return false
-        }
-        return true
-      },
-    })
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER)
   const [selected, setSelected] = useState<Shop | null>(null)
+
+  const { data, isLoading, isError } = useGetShopsQuery({})
+  const [updateShopStatus] = useUpdateShopStatusMutation()
+
+  const shops = useMemo(
+    () => (data?.data ?? []).map(mapShopFromApi),
+    [data],
+  )
+
+  const filtered = useMemo(
+    () => filterShops(shops, query.trim().toLowerCase(), filter),
+    [shops, query, filter],
+  )
 
   const counts = useMemo(() => {
     let verified = 0
@@ -49,15 +66,33 @@ export default function ShopManagement() {
     return { total: shops.length, verified, pending, suspended }
   }, [shops])
 
-  const approve = (key: string) =>
-    setShops((prev) =>
-      prev.map((s) => (s.key === key ? { ...s, status: 'Verified' } : s)),
-    )
+  const approve = async (key: string) => {
+    try {
+      const result = await updateShopStatus({
+        id: key,
+        status: 'approved',
+      }).unwrap()
+      message.success(result.message || 'Business approved successfully.')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to approve business.'
+      message.error(errorMessage)
+    }
+  }
 
-  const reject = (key: string) =>
-    setShops((prev) =>
-      prev.map((s) => (s.key === key ? { ...s, status: 'Suspended' } : s)),
-    )
+  const reject = async (key: string) => {
+    try {
+      const result = await updateShopStatus({
+        id: key,
+        status: 'rejected',
+      }).unwrap()
+      message.success(result.message || 'Business rejected successfully.')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to reject business.'
+      message.error(errorMessage)
+    }
+  }
 
   return (
     <div className="py-6">
@@ -107,12 +142,22 @@ export default function ShopManagement() {
         </header>
 
         <div className="mt-6">
-          <ShopsTable
-            data={filtered}
-            onView={(shop) => setSelected(shop)}
-            onApprove={approve}
-            onReject={reject}
-          />
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <Spin size="large" />
+            </div>
+          ) : isError ? (
+            <p className="py-10 text-center text-sm text-red-400">
+              Failed to load businesses. Please try again.
+            </p>
+          ) : (
+            <ShopsTable
+              data={filtered}
+              onView={(shop) => setSelected(shop)}
+              onApprove={approve}
+              onReject={reject}
+            />
+          )}
         </div>
       </section>
 
@@ -120,6 +165,8 @@ export default function ShopManagement() {
         shop={selected}
         open={selected !== null}
         onClose={() => setSelected(null)}
+        onApprove={approve}
+        onReject={reject}
       />
     </div>
   )

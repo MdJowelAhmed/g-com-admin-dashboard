@@ -1,5 +1,6 @@
 import { Popconfirm, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { canReviewShop } from '../../redux/api/shopManagementApi'
 import type { Shop, ShopStatus } from './shopData'
 
 const statusStyles: Record<ShopStatus, string> = {
@@ -53,46 +54,54 @@ export default function ShopsTable({
       title: 'Actions',
       key: 'actions',
       width: 300,
-      render: (_, record) => (
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onView(record)}
-            className="rounded-md border border-amber-500/60 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/20"
-          >
-            View Details
-          </button>
-          <Popconfirm
-            title="Approve shop"
-            description={`Mark ${record.name} as Verified?`}
-            okText="Approve"
-            cancelText="Cancel"
-            onConfirm={() => onApprove(record.key)}
-          >
+      render: (_, record) => {
+        const showApprovalActions = canReviewShop(record)
+
+        return (
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-600"
+              onClick={() => onView(record)}
+              className="rounded-md border border-amber-500/60 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/20"
             >
-              Approved
+              View Details
             </button>
-          </Popconfirm>
-          <Popconfirm
-            title="Reject shop"
-            description={`Suspend ${record.name}?`}
-            okText="Reject"
-            cancelText="Cancel"
-            okButtonProps={{ danger: true }}
-            onConfirm={() => onReject(record.key)}
-          >
-            <button
-              type="button"
-              className="rounded-md bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-600"
-            >
-              Reject
-            </button>
-          </Popconfirm>
-        </div>
-      ),
+            {showApprovalActions && (
+              <>
+                <Popconfirm
+                  title="Approve shop"
+                  description={`Mark ${record.name} as Verified?`}
+                  okText="Approve"
+                  cancelText="Cancel"
+                  onConfirm={() => onApprove(record.key)}
+                >
+                  <button
+                    type="button"
+                    className="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-600"
+                  >
+                    Approved
+                  </button>
+                </Popconfirm>
+                <Popconfirm
+                  title="Reject shop"
+                  description={`Suspend ${record.name}?`}
+                  okText="Reject"
+                  cancelText="Cancel"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => onReject(record.key)}
+                >
+                  <button
+                    type="button"
+                    className="rounded-md bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-600"
+                  >
+                    Reject
+                  </button>
+                </Popconfirm>
+              </>
+            )}
+          </div>
+        )
+      },
     },
   ]
 
