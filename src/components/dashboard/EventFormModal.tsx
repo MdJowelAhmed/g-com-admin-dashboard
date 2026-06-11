@@ -1,67 +1,72 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-} from 'react'
-import { Modal } from 'antd'
-import { CalendarPlus, ChevronDown, Upload } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Modal, message } from 'antd'
+import { CalendarPlus } from 'lucide-react'
 import FormControl, { controlClass, textareaClass } from './FormControl'
+import ImageUploader from '../common/ImageUploader'
 import {
-  EVENT_SIZES,
-  revenueOf,
-  type EventRecord,
-  type EventSize,
-} from './eventData'
+  uploadImageFile,
+  useGetPresignedUploadUrlMutation,
+} from '../../redux/api/imageUploadApi'
+import {
+  toEventPayload,
+  type EventPayload,
+} from '../../redux/api/eventApi'
+import { revenueOf, type EventRecord } from './eventData'
 
 export type EventFormState = {
   name: string
-  about: string
-  size: EventSize
-  location: string
-  capacity: number
+  description: string
   startDate: string
   startTime: string
+  endDate: string
+  endTime: string
+  registrationDeadline: string
+  latitude: string
+  longitude: string
+  maxCapacity: number
   ticketPrice: number
-  organizer: string
-  websiteLink: string
-  media: File | null
+  organizerName: string
+  image: string
 }
 
 const blankState: EventFormState = {
   name: '',
-  about: '',
-  size: 'Medium',
-  location: '',
-  capacity: 0,
+  description: '',
   startDate: '',
   startTime: '',
+  endDate: '',
+  endTime: '',
+  registrationDeadline: '',
+  latitude: '23.7793',
+  longitude: '90.3989',
+  maxCapacity: 0,
   ticketPrice: 0,
-  organizer: '',
-  websiteLink: '',
-  media: null,
+  organizerName: '',
+  image: '',
 }
 
 const fromEvent = (event: EventRecord): EventFormState => ({
   name: event.name,
-  about: event.about,
-  size: event.size,
-  location: event.location,
-  capacity: event.capacity,
-  startDate: event.startDate,
-  startTime: event.startTime,
+  description: event.about,
+  startDate: event.startDateInput ?? '',
+  startTime: event.startTimeInput ?? '',
+  endDate: event.endDate ?? '',
+  endTime: event.endTime ?? '',
+  registrationDeadline: event.registrationDeadline ?? '',
+  latitude: event.latitude != null ? String(event.latitude) : '23.7793',
+  longitude: event.longitude != null ? String(event.longitude) : '90.3989',
+  maxCapacity: event.capacity,
   ticketPrice: event.ticketPrice,
-  organizer: event.organizer,
-  websiteLink: event.websiteLink,
-  media: null,
+  organizerName: event.organizer,
+  image: event.image ?? '',
 })
 
 type Props = {
   open: boolean
   event: EventRecord | null
   onClose: () => void
-  onSubmit: (data: EventFormState) => void
+  onSubmit: (payload: EventPayload) => void | Promise<void>
+  isSubmitting?: boolean
 }
 
 export default function EventFormModal({
@@ -69,42 +74,70 @@ export default function EventFormModal({
   event,
   onClose,
   onSubmit,
+  isSubmitting = false,
 }: Props) {
-  const fileInput = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<EventFormState>(blankState)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [getPresignedUrl] = useGetPresignedUploadUrlMutation()
+
+  const isBusy = isSubmitting || isUploading
+  const hasImage = Boolean(imageFile || form.image)
+  const isEdit = event !== null
 
   useEffect(() => {
     if (!open) return
     setForm(event ? fromEvent(event) : blankState)
+    setImageFile(null)
+    setIsUploading(false)
   }, [open, event])
-
-  const isEdit = event !== null
 
   const update = <K extends keyof EventFormState>(
     key: K,
     value: EventFormState[K],
   ) => setForm((prev) => ({ ...prev, [key]: value }))
 
-  const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    update('media', file)
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+
+    if (!imageFile && !form.image) return
+
+    let imageUrl = form.image
+
+    if (imageFile) {
+      setIsUploading(true)
+      try {
+        imageUrl = await uploadImageFile(imageFile, async (payload) => {
+          const result = await getPresignedUrl(payload).unwrap()
+          return result
+        })
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Image upload failed.'
+        message.error(errorMessage)
+        setIsUploading(false)
+        return
+      }
+      setIsUploading(false)
+    }
+
+    await onSubmit(toEventPayload(form, imageUrl))
   }
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    onSubmit(form)
+  const handleClose = () => {
+    if (isBusy) return
     onClose()
   }
 
   const revenuePotential = revenueOf({
-    seatSales: form.capacity,
+    seatSales: form.maxCapacity,
     ticketPrice: form.ticketPrice,
   })
 
   return (
     <Modal
       open={open}
-      onCancel={onClose}
+      onCancel={handleClose}
       footer={null}
       closable={false}
       width={920}
@@ -137,71 +170,109 @@ export default function EventFormModal({
                 type="text"
                 value={form.name}
                 onChange={(e) => update('name', e.target.value)}
-                placeholder="Sabbir Ahmed"
+                placeholder="National Environment Event"
                 className={controlClass}
                 required
+                disabled={isBusy}
               />
             </FormControl>
 
-            <FormControl label="About This Event">
-              <textarea
-                value={form.about}
-                onChange={(e) => update('about', e.target.value)}
-                placeholder="An intimate evening of smooth jazz and cocktails at the Blue Note Lounge."
-                className={textareaClass}
-              />
-            </FormControl>
-
-            <FormControl label="Event Type" required>
-              <SelectField
-                value={form.size}
-                onChange={(v) => update('size', v as EventSize)}
-                options={EVENT_SIZES}
-              />
-            </FormControl>
-
-            <FormControl label="Location" required>
+            <FormControl label="Organizer Name" required>
               <input
                 type="text"
-                value={form.location}
-                onChange={(e) => update('location', e.target.value)}
-                placeholder="Enter location"
+                value={form.organizerName}
+                onChange={(e) => update('organizerName', e.target.value)}
+                placeholder="Evently"
                 className={controlClass}
                 required
+                disabled={isBusy}
               />
             </FormControl>
 
-            <FormControl label="Total Capacity" required>
-              <input
-                type="number"
-                min={1}
-                value={form.capacity || ''}
-                onChange={(e) =>
-                  update('capacity', Number(e.target.value) || 0)
-                }
-                placeholder="45"
-                className={controlClass}
-                required
-              />
-            </FormControl>
+            <div className="lg:col-span-2">
+              <FormControl label="Event Description" required>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => update('description', e.target.value)}
+                  placeholder="This is event description"
+                  className={textareaClass}
+                  required
+                  disabled={isBusy}
+                />
+              </FormControl>
+            </div>
 
-            <FormControl label="Event Start Date" required>
+            <FormControl label="Start Date" required>
               <input
                 type="date"
                 value={form.startDate}
                 onChange={(e) => update('startDate', e.target.value)}
                 className={controlClass}
                 required
+                disabled={isBusy}
               />
             </FormControl>
 
-            <FormControl label="Event Start Time" required>
+            <FormControl label="Start Time" required>
               <input
                 type="time"
                 value={form.startTime}
                 onChange={(e) => update('startTime', e.target.value)}
                 className={controlClass}
                 required
+                disabled={isBusy}
+              />
+            </FormControl>
+
+            <FormControl label="End Date" required>
+              <input
+                type="date"
+                value={form.endDate}
+                onChange={(e) => update('endDate', e.target.value)}
+                min={form.startDate || undefined}
+                className={controlClass}
+                required
+                disabled={isBusy}
+              />
+            </FormControl>
+
+            <FormControl label="End Time" required>
+              <input
+                type="time"
+                value={form.endTime}
+                onChange={(e) => update('endTime', e.target.value)}
+                className={controlClass}
+                required
+                disabled={isBusy}
+              />
+            </FormControl>
+
+            <FormControl label="Registration Deadline" required>
+              <input
+                type="date"
+                value={form.registrationDeadline}
+                onChange={(e) =>
+                  update('registrationDeadline', e.target.value)
+                }
+                max={form.startDate || undefined}
+                className={controlClass}
+                required
+                disabled={isBusy}
+              />
+            </FormControl>
+
+            <FormControl label="Max Capacity" required>
+              <input
+                type="number"
+                min={1}
+                value={form.maxCapacity || ''}
+                onChange={(e) =>
+                  update('maxCapacity', Number(e.target.value) || 0)
+                }
+                placeholder="100"
+                className={controlClass}
+                required
+                disabled={isBusy}
               />
             </FormControl>
 
@@ -214,58 +285,52 @@ export default function EventFormModal({
                 onChange={(e) =>
                   update('ticketPrice', Number(e.target.value) || 0)
                 }
-                placeholder="$25.00"
+                placeholder="300"
                 className={controlClass}
                 required
+                disabled={isBusy}
               />
             </FormControl>
 
-            <FormControl label="Organizer Name" required>
+            <FormControl label="Latitude" required>
               <input
-                type="text"
-                value={form.organizer}
-                onChange={(e) => update('organizer', e.target.value)}
-                placeholder="Sarah Jenkins"
+                type="number"
+                step="any"
+                value={form.latitude}
+                onChange={(e) => update('latitude', e.target.value)}
+                placeholder="23.7793"
                 className={controlClass}
                 required
+                disabled={isBusy}
               />
             </FormControl>
 
-            <div className="lg:row-span-2">
-              <span className="mb-2 block text-sm font-medium text-white">
-                Upload picture
-              </span>
-              <button
-                type="button"
-                onClick={() => fileInput.current?.click()}
-                className="flex h-[calc(100%-1.75rem)] min-h-[180px] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-brand bg-transparent text-sm text-gray-300 transition-colors hover:bg-brand/5"
-              >
-                <Upload size={26} />
-                <span className="truncate px-4">
-                  {form.media ? form.media.name : 'Upload Media Picture'}
-                </span>
-              </button>
+            <FormControl label="Longitude" required>
               <input
-                ref={fileInput}
-                type="file"
-                accept="image/*"
-                onChange={onFileChange}
-                className="hidden"
+                type="number"
+                step="any"
+                value={form.longitude}
+                onChange={(e) => update('longitude', e.target.value)}
+                placeholder="90.3989"
+                className={controlClass}
+                required
+                disabled={isBusy}
+              />
+            </FormControl>
+
+            <div className="lg:col-span-2">
+              <ImageUploader
+                label="Event Image"
+                required
+                value={form.image}
+                onFileSelect={setImageFile}
+                disabled={isBusy}
+                hint="Select an image — it uploads when you submit"
               />
             </div>
-
-            <FormControl label="Add Website Link">
-              <input
-                type="url"
-                value={form.websiteLink}
-                onChange={(e) => update('websiteLink', e.target.value)}
-                placeholder="Select a Business Provider"
-                className={controlClass}
-              />
-            </FormControl>
           </div>
 
-          {form.capacity > 0 && form.ticketPrice > 0 && (
+          {form.maxCapacity > 0 && form.ticketPrice > 0 && (
             <div className="mt-6 rounded-md border border-surface-border bg-surface-elevated/60 px-4 py-3 text-xs text-gray-300">
               Revenue potential at full capacity:{' '}
               <span className="font-semibold text-white">
@@ -278,47 +343,29 @@ export default function EventFormModal({
         <footer className="flex items-center justify-end gap-3 border-t border-surface-border px-7 py-4">
           <button
             type="button"
-            onClick={onClose}
-            className="h-10 rounded-md border border-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand/10"
+            onClick={handleClose}
+            disabled={isBusy}
+            className="h-10 rounded-md border border-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+            disabled={isBusy || !hasImage}
+            className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isEdit ? 'Save Changes' : 'Create New Event'}
+            {isUploading
+              ? 'Uploading image...'
+              : isSubmitting
+                ? isEdit
+                  ? 'Saving...'
+                  : 'Creating...'
+                : isEdit
+                  ? 'Save Changes'
+                  : 'Create New Event'}
           </button>
         </footer>
       </form>
     </Modal>
-  )
-}
-
-type SelectFieldProps = {
-  value: string
-  onChange: (value: string) => void
-  options: readonly string[]
-}
-
-function SelectField({ value, onChange, options }: SelectFieldProps) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${controlClass} appearance-none pr-10`}
-      >
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        size={18}
-        className="pointer-events-none absolute inset-y-0 right-3 my-auto text-gray-400"
-      />
-    </div>
   )
 }

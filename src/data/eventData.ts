@@ -22,6 +22,14 @@ export type EventRecord = {
   websiteLink: string
   status: EventStatus
   active: boolean
+  image?: string
+  startDateInput?: string
+  startTimeInput?: string
+  endDate?: string
+  endTime?: string
+  registrationDeadline?: string
+  latitude?: number
+  longitude?: number
 }
 
 export const EVENT_STATUSES: EventStatus[] = [

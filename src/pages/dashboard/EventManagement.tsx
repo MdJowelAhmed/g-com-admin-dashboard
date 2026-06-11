@@ -1,62 +1,81 @@
 import { useMemo, useState } from 'react'
+import { message, Spin } from 'antd'
 import { DollarSign, Plus, Search, TicketCheck, Users } from 'lucide-react'
 import StatCard from '../../components/dashboard/StatCard'
 import EventsTable from '../../components/dashboard/EventsTable'
-import EventFormModal, {
-  type EventFormState,
-} from '../../components/dashboard/EventFormModal'
+import EventFormModal from '../../components/dashboard/EventFormModal'
 import EventDetailsModal from '../../components/dashboard/EventDetailsModal'
 import EventFilter, {
   EMPTY_EVENT_FILTER,
   type EventFilterState,
 } from '../../components/dashboard/EventFilter'
-import { useFilteredList } from '../../hooks/useFilteredList'
+import { revenueOf, type EventRecord } from '../../data/eventData'
 import {
-  nextEventKey,
-  revenueOf,
-  type EventRecord,
-} from '../../data/eventData'
-import { getInitialEvents } from '../../services/mock/dashboardDataService'
+  mapEventFromApi,
+  type EventPayload,
+  useCreateEventMutation,
+  useGetEventsQuery,
+  useUpdateEventMutation,
+} from '../../redux/api/eventApi'
 import { formatMoney } from '../../utils/formatMoney'
 
+function filterEvents(
+  events: EventRecord[],
+  query: string,
+  activeFilter: EventFilterState,
+) {
+  return events.filter((event) => {
+    if (query) {
+      const haystack =
+        `${event.name} ${event.organizer} ${event.location}`.toLowerCase()
+      if (!haystack.includes(query)) return false
+    }
+    if (
+      activeFilter.statuses.length &&
+      !activeFilter.statuses.includes(event.status)
+    ) {
+      return false
+    }
+    if (activeFilter.sizes.length && !activeFilter.sizes.includes(event.size)) {
+      return false
+    }
+    return true
+  })
+}
 
 export default function EventManagement() {
-  const { data: events, setData: setEvents, query, setQuery, filter, setFilter, filtered } =
-    useFilteredList<EventRecord, EventFilterState>({
-      initialData: getInitialEvents(),
-      emptyFilter: EMPTY_EVENT_FILTER,
-      filterFn: (event, q, activeFilter) => {
-        if (q) {
-          const haystack =
-            `${event.name} ${event.organizer} ${event.location}`.toLowerCase()
-          if (!haystack.includes(q)) return false
-        }
-        if (
-          activeFilter.statuses.length &&
-          !activeFilter.statuses.includes(event.status)
-        ) {
-          return false
-        }
-        if (activeFilter.sizes.length && !activeFilter.sizes.includes(event.size)) {
-          return false
-        }
-        return true
-      },
-    })
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<EventFilterState>(EMPTY_EVENT_FILTER)
   const [viewing, setViewing] = useState<EventRecord | null>(null)
   const [formMode, setFormMode] = useState<{
     open: boolean
     event: EventRecord | null
   }>({ open: false, event: null })
 
+  const { data, isLoading, isError } = useGetEventsQuery({})
+  const [createEvent, { isLoading: isCreating }] = useCreateEventMutation()
+  const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation()
+
+  const isSubmitting = isCreating || isUpdating
+
+  const events = useMemo(
+    () => (data?.data ?? []).map(mapEventFromApi),
+    [data],
+  )
+
+  const filtered = useMemo(
+    () => filterEvents(events, query.trim().toLowerCase(), filter),
+    [events, query, filter],
+  )
+
   const totals = useMemo(() => {
     let sales = 0
     let tickets = 0
     let checkIns = 0
-    for (const e of events) {
-      sales += revenueOf(e)
-      tickets += e.seatSales
-      checkIns += e.checkIns
+    for (const event of events) {
+      sales += revenueOf(event)
+      tickets += event.seatSales
+      checkIns += event.checkIns
     }
     const checkInRate = tickets > 0 ? (checkIns / tickets) * 100 : 0
     return { sales, tickets, checkInRate }
@@ -64,75 +83,42 @@ export default function EventManagement() {
 
   const openCreate = () => setFormMode({ open: true, event: null })
   const openEdit = (event: EventRecord) => setFormMode({ open: true, event })
-  const closeForm = () => setFormMode({ open: false, event: null })
-
-  const handleSubmit = (data: EventFormState) => {
-    if (formMode.event) {
-      setEvents((prev) =>
-        prev.map((e) =>
-          e.key === formMode.event!.key
-            ? {
-                ...e,
-                name: data.name,
-                about: data.about,
-                size: data.size,
-                location: data.location,
-                capacity: data.capacity,
-                startDate: data.startDate,
-                startTime: data.startTime,
-                ticketPrice: data.ticketPrice,
-                organizer: data.organizer,
-                websiteLink: data.websiteLink,
-              }
-            : e,
-        ),
-      )
-      return
-    }
-
-    setEvents((prev) => {
-      const sl = String(prev.length + 1).padStart(2, '0')
-      const newEvent: EventRecord = {
-        key: nextEventKey(),
-        sl,
-        name: data.name,
-        about: data.about,
-        size: data.size,
-        location: data.location,
-        capacity: data.capacity,
-        seatSales: 0,
-        checkIns: 0,
-        ticketPrice: data.ticketPrice,
-        startDate: data.startDate,
-        startTime: data.startTime,
-        organizer: data.organizer,
-        websiteLink: data.websiteLink,
-        status: 'Upcoming',
-        active: true,
-      }
-      return [...prev, newEvent]
-    })
+  const closeForm = () => {
+    if (isSubmitting) return
+    setFormMode({ open: false, event: null })
   }
 
-  const handleDelete = (key: string) =>
-    setEvents((prev) => prev.filter((e) => e.key !== key))
+  const handleSubmit = async (payload: EventPayload) => {
+    try {
+      if (formMode.event) {
+        const result = await updateEvent({
+          id: formMode.event.key,
+          body: payload,
+        }).unwrap()
+        message.success(result.message || 'Event updated successfully.')
+      } else {
+        const result = await createEvent(payload).unwrap()
+        message.success(result.message || 'Event created successfully.')
+      }
+      setFormMode({ open: false, event: null })
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : formMode.event
+            ? 'Failed to update event.'
+            : 'Failed to create event.'
+      message.error(errorMessage)
+    }
+  }
 
-  const handleToggleActive = (key: string, next: boolean) =>
-    setEvents((prev) =>
-      prev.map((e) =>
-        e.key === key
-          ? {
-              ...e,
-              active: next,
-              status: next
-                ? e.status === 'Cancelled'
-                  ? 'Upcoming'
-                  : e.status
-                : 'Cancelled',
-            }
-          : e,
-      ),
-    )
+  const handleDelete = (_key: string) => {
+    message.info('Delete event is not available yet.')
+  }
+
+  const handleToggleActive = (_key: string, _next: boolean) => {
+    message.info('Activate/deactivate is not available yet.')
+  }
 
   return (
     <div className="py-6">
@@ -181,13 +167,23 @@ export default function EventManagement() {
         </header>
 
         <div className="mt-6">
-          <EventsTable
-            data={filtered}
-            onEdit={openEdit}
-            onView={setViewing}
-            onDelete={handleDelete}
-            onToggleActive={handleToggleActive}
-          />
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <Spin size="large" />
+            </div>
+          ) : isError ? (
+            <p className="py-10 text-center text-sm text-red-400">
+              Failed to load events. Please try again.
+            </p>
+          ) : (
+            <EventsTable
+              data={filtered}
+              onEdit={openEdit}
+              onView={setViewing}
+              onDelete={handleDelete}
+              onToggleActive={handleToggleActive}
+            />
+          )}
         </div>
       </section>
 
@@ -196,6 +192,7 @@ export default function EventManagement() {
         event={formMode.event}
         onClose={closeForm}
         onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
       />
 
       <EventDetailsModal

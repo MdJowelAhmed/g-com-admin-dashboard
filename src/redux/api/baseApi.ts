@@ -51,6 +51,7 @@ export const baseApi = createApi({
   'Promotions',
   'Users',
   'Controllers',
+  'Events',
 ],
   
    
