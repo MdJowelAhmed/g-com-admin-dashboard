@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Search } from 'lucide-react'
 import OrdersTable from '../../components/dashboard/OrdersTable'
 import OrderRecordModal from '../../components/dashboard/OrderRecordModal'
@@ -6,35 +6,35 @@ import OrderFilter, {
   EMPTY_ORDER_FILTER,
   type OrderFilterState,
 } from '../../components/dashboard/OrderFilter'
-import {
-  initialOrders,
-  type OrderRecord,
-} from '../../components/dashboard/orderData'
+import { useFilteredList } from '../../hooks/useFilteredList'
+import { type OrderRecord } from '../../data/orderData'
+import { getInitialOrders } from '../../services/mock/dashboardDataService'
 
 export default function OrderManagement() {
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<OrderFilterState>(EMPTY_ORDER_FILTER)
-  const [selected, setSelected] = useState<OrderRecord | null>(null)
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const min = filter.minAmount ? Number(filter.minAmount) : null
-    const max = filter.maxAmount ? Number(filter.maxAmount) : null
-
-    return initialOrders.filter((order) => {
-      if (q) {
-        const haystack =
-          `${order.orderId} ${order.customerName} ${order.vendor}`.toLowerCase()
-        if (!haystack.includes(q)) return false
-      }
-      if (filter.statuses.length && !filter.statuses.includes(order.status)) {
-        return false
-      }
-      if (min !== null && order.amount < min) return false
-      if (max !== null && order.amount > max) return false
-      return true
+  const { query, setQuery, filter, setFilter, filtered } =
+    useFilteredList<OrderRecord, OrderFilterState>({
+      initialData: getInitialOrders(),
+      emptyFilter: EMPTY_ORDER_FILTER,
+      filterFn: (order, q, activeFilter) => {
+        const min = activeFilter.minAmount ? Number(activeFilter.minAmount) : null
+        const max = activeFilter.maxAmount ? Number(activeFilter.maxAmount) : null
+        if (q) {
+          const haystack =
+            `${order.orderId} ${order.customerName} ${order.vendor}`.toLowerCase()
+          if (!haystack.includes(q)) return false
+        }
+        if (
+          activeFilter.statuses.length &&
+          !activeFilter.statuses.includes(order.status)
+        ) {
+          return false
+        }
+        if (min !== null && order.amount < min) return false
+        if (max !== null && order.amount > max) return false
+        return true
+      },
     })
-  }, [query, filter])
+  const [selected, setSelected] = useState<OrderRecord | null>(null)
 
   return (
     <div className="py-6">

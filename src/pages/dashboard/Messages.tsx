@@ -6,7 +6,7 @@ import {
   initialConversations,
   type ChatMessage,
   type Conversation,
-} from '../../components/dashboard/chatData'
+} from '../../data/chatData'
 
 let messageCounter = 10000
 const nextMessageId = () => `m-${++messageCounter}`

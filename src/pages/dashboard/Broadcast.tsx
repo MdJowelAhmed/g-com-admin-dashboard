@@ -14,7 +14,7 @@ import {
   type BroadcastRecord,
   type DeliveryChannel,
   type NotificationType,
-} from '../../components/dashboard/broadcastData'
+} from '../../data/broadcastData'
 
 type ComposeState = {
   type: NotificationType

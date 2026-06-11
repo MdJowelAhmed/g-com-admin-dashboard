@@ -8,7 +8,7 @@ import CategoryFormModal, {
 import {
   initialCategories,
   type Category,
-} from '../../components/dashboard/categoryData'
+} from '../../data/categoryData'
 
 export default function CategoryPage() {
   const [categories, setCategories] = useState<Category[]>(initialCategories)

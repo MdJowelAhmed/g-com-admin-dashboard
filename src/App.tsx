@@ -6,6 +6,7 @@ import OtpVerification from './pages/auth/OtpVerification'
 import SetNewPassword from './pages/auth/SetNewPassword'
 import PasswordResetSuccess from './pages/auth/PasswordResetSuccess'
 import DashboardLayout from './layouts/DashboardLayout'
+import ProtectedRoute from './components/ProtectedRoute'
 import DashboardOverview from './pages/dashboard/DashboardOverview'
 import Notifications from './pages/dashboard/Notifications'
 import HomeControl from './pages/dashboard/HomeControl'
@@ -25,6 +26,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
+      {/* ── Public auth routes ── */}
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/check-email" element={<CheckEmail />} />
@@ -32,20 +34,23 @@ export default function App() {
       <Route path="/reset-password" element={<SetNewPassword />} />
       <Route path="/password-reset-success" element={<PasswordResetSuccess />} />
 
-      <Route path="/dashboard" element={<DashboardLayout />}>
-        <Route index element={<DashboardOverview />} />
-        <Route path="notifications" element={<Notifications />} />
-        <Route path="home-control" element={<HomeControl />} />
-        <Route path="shops" element={<ShopManagement />} />
-        <Route path="users" element={<UserManagement />} />
-        <Route path="orders" element={<OrderManagement />} />
-        <Route path="earnings" element={<EarningsPayouts />} />
-        <Route path="events" element={<EventManagement />} />
-        <Route path="controllers" element={<ControllerManagement />} />
-        <Route path="messages" element={<Messages />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="broadcast" element={<Broadcast />} />
-        <Route path="category" element={<Category />} />
+      {/* ── Protected dashboard routes — requires authentication ── */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<DashboardOverview />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="home-control" element={<HomeControl />} />
+          <Route path="shops" element={<ShopManagement />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="orders" element={<OrderManagement />} />
+          <Route path="earnings" element={<EarningsPayouts />} />
+          <Route path="events" element={<EventManagement />} />
+          <Route path="controllers" element={<ControllerManagement />} />
+          <Route path="messages" element={<Messages />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="broadcast" element={<Broadcast />} />
+          <Route path="category" element={<Category />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />

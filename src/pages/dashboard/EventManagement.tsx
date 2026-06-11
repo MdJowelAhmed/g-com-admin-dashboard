@@ -10,23 +10,39 @@ import EventFilter, {
   EMPTY_EVENT_FILTER,
   type EventFilterState,
 } from '../../components/dashboard/EventFilter'
+import { useFilteredList } from '../../hooks/useFilteredList'
 import {
-  initialEvents,
   nextEventKey,
   revenueOf,
   type EventRecord,
-} from '../../components/dashboard/eventData'
+} from '../../data/eventData'
+import { getInitialEvents } from '../../services/mock/dashboardDataService'
+import { formatMoney } from '../../utils/formatMoney'
 
-const formatMoney = (n: number) => {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`
-  return `$${n.toFixed(0)}`
-}
 
 export default function EventManagement() {
-  const [events, setEvents] = useState<EventRecord[]>(initialEvents)
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<EventFilterState>(EMPTY_EVENT_FILTER)
+  const { data: events, setData: setEvents, query, setQuery, filter, setFilter, filtered } =
+    useFilteredList<EventRecord, EventFilterState>({
+      initialData: getInitialEvents(),
+      emptyFilter: EMPTY_EVENT_FILTER,
+      filterFn: (event, q, activeFilter) => {
+        if (q) {
+          const haystack =
+            `${event.name} ${event.organizer} ${event.location}`.toLowerCase()
+          if (!haystack.includes(q)) return false
+        }
+        if (
+          activeFilter.statuses.length &&
+          !activeFilter.statuses.includes(event.status)
+        ) {
+          return false
+        }
+        if (activeFilter.sizes.length && !activeFilter.sizes.includes(event.size)) {
+          return false
+        }
+        return true
+      },
+    })
   const [viewing, setViewing] = useState<EventRecord | null>(null)
   const [formMode, setFormMode] = useState<{
     open: boolean
@@ -45,24 +61,6 @@ export default function EventManagement() {
     const checkInRate = tickets > 0 ? (checkIns / tickets) * 100 : 0
     return { sales, tickets, checkInRate }
   }, [events])
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return events.filter((e) => {
-      if (q) {
-        const haystack =
-          `${e.name} ${e.organizer} ${e.location}`.toLowerCase()
-        if (!haystack.includes(q)) return false
-      }
-      if (filter.statuses.length && !filter.statuses.includes(e.status)) {
-        return false
-      }
-      if (filter.sizes.length && !filter.sizes.includes(e.size)) {
-        return false
-      }
-      return true
-    })
-  }, [events, query, filter])
 
   const openCreate = () => setFormMode({ open: true, event: null })
   const openEdit = (event: EventRecord) => setFormMode({ open: true, event })

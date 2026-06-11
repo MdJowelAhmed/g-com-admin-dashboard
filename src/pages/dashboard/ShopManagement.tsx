@@ -7,31 +7,34 @@ import ShopFilter, {
   EMPTY_FILTER,
   type FilterState,
 } from '../../components/dashboard/ShopFilter'
-import { initialShops, type Shop } from '../../components/dashboard/shopData'
+import { useFilteredList } from '../../hooks/useFilteredList'
+import { type Shop } from '../../data/shopData'
+import { getInitialShops } from '../../services/mock/dashboardDataService'
 
 export default function ShopManagement() {
-  const [shops, setShops] = useState<Shop[]>(initialShops)
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER)
-  const [selected, setSelected] = useState<Shop | null>(null)
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return shops.filter((shop) => {
-      if (q) {
-        const haystack =
-          `${shop.name} ${shop.shopId} ${shop.type} ${shop.category}`.toLowerCase()
-        if (!haystack.includes(q)) return false
-      }
-      if (filter.statuses.length && !filter.statuses.includes(shop.status)) {
-        return false
-      }
-      if (filter.types.length && !filter.types.includes(shop.type)) {
-        return false
-      }
-      return true
+  const { data: shops, setData: setShops, query, setQuery, filter, setFilter, filtered } =
+    useFilteredList<Shop, FilterState>({
+      initialData: getInitialShops(),
+      emptyFilter: EMPTY_FILTER,
+      filterFn: (shop, q, activeFilter) => {
+        if (q) {
+          const haystack =
+            `${shop.name} ${shop.shopId} ${shop.type} ${shop.category}`.toLowerCase()
+          if (!haystack.includes(q)) return false
+        }
+        if (
+          activeFilter.statuses.length &&
+          !activeFilter.statuses.includes(shop.status)
+        ) {
+          return false
+        }
+        if (activeFilter.types.length && !activeFilter.types.includes(shop.type)) {
+          return false
+        }
+        return true
+      },
     })
-  }, [shops, query, filter])
+  const [selected, setSelected] = useState<Shop | null>(null)
 
   const counts = useMemo(() => {
     let verified = 0

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { message, Spin } from 'antd'
 import { Search } from 'lucide-react'
 import UsersTable from '../../components/dashboard/UsersTable'
 import UserDetailsModal from '../../components/dashboard/UserDetailsModal'
@@ -7,54 +8,74 @@ import UserFilter, {
   EMPTY_USER_FILTER,
   type UserFilterState,
 } from '../../components/dashboard/UserFilter'
-import { initialUsers, type User } from '../../components/dashboard/userData'
+import { type User } from '../../data/userData'
+import {
+  mapUserFromApi,
+  useGetUsersQuery,
+  useUpdateUserStatusMutation,
+} from '../../redux/api/userApi'
+
+function filterUsers(
+  users: User[],
+  query: string,
+  activeFilter: UserFilterState,
+) {
+  return users.filter((user) => {
+    if (query) {
+      const haystack = `${user.name} ${user.email}`.toLowerCase()
+      if (!haystack.includes(query)) return false
+    }
+    if (
+      activeFilter.statuses.length &&
+      !activeFilter.statuses.includes(user.status)
+    ) {
+      return false
+    }
+    if (activeFilter.activeOnly && !user.active) return false
+    return true
+  })
+}
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>(initialUsers)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<UserFilterState>(EMPTY_USER_FILTER)
   const [viewing, setViewing] = useState<User | null>(null)
   const [editing, setEditing] = useState<User | null>(null)
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return users.filter((u) => {
-      if (q) {
-        const haystack = `${u.name} ${u.email}`.toLowerCase()
-        if (!haystack.includes(q)) return false
-      }
-      if (filter.statuses.length && !filter.statuses.includes(u.status)) {
-        return false
-      }
-      if (filter.activeOnly && !u.active) return false
-      return true
-    })
-  }, [users, query, filter])
+  const { data, isLoading, isError } = useGetUsersQuery()
+  const [updateUserStatus] = useUpdateUserStatusMutation()
 
-  const handleDelete = (key: string) =>
-    setUsers((prev) => prev.filter((u) => u.key !== key))
+  const users = useMemo(
+    () => (data?.data ?? []).map(mapUserFromApi),
+    [data],
+  )
 
-  const handleToggleActive = (key: string, next: boolean) =>
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.key === key
-          ? {
-              ...u,
-              active: next,
-              status: next
-                ? u.status === 'Suspended'
-                  ? 'Verified'
-                  : u.status
-                : 'Suspended',
-            }
-          : u,
-      ),
-    )
+  const filtered = useMemo(
+    () => filterUsers(users, query.trim().toLowerCase(), filter),
+    [users, query, filter],
+  )
 
-  const handleSave = (key: string, patch: Partial<User>) =>
-    setUsers((prev) =>
-      prev.map((u) => (u.key === key ? { ...u, ...patch } : u)),
-    )
+  const handleDelete = (_key: string) => {
+    message.info('Delete user is not available yet.')
+  }
+
+  const handleToggleActive = async (key: string, next: boolean) => {
+    try {
+      const result = await updateUserStatus({
+        id: key,
+        status: next ? 'active' : 'inactive',
+      }).unwrap()
+      message.success(result.message || 'User status updated successfully.')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to update user status.'
+      message.error(errorMessage)
+    }
+  }
+
+  const handleSave = (_key: string, _patch: Partial<User>) => {
+    message.info('Edit user is not available yet.')
+  }
 
   return (
     <div className="py-6">
@@ -81,13 +102,23 @@ export default function UserManagement() {
         </header>
 
         <div className="mt-6">
-          <UsersTable
-            data={filtered}
-            onEdit={setEditing}
-            onView={setViewing}
-            onDelete={handleDelete}
-            onToggleActive={handleToggleActive}
-          />
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <Spin size="large" />
+            </div>
+          ) : isError ? (
+            <p className="py-10 text-center text-sm text-red-400">
+              Failed to load users. Please try again.
+            </p>
+          ) : (
+            <UsersTable
+              data={filtered}
+              onEdit={setEditing}
+              onView={setViewing}
+              onDelete={handleDelete}
+              onToggleActive={handleToggleActive}
+            />
+          )}
         </div>
       </section>
 

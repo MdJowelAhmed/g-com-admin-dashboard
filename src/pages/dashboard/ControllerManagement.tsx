@@ -8,7 +8,7 @@ import {
   initialControllers,
   nextControllerKey,
   type Controller,
-} from '../../components/dashboard/controllerData'
+} from '../../data/controllerData'
 
 export default function ControllerManagement() {
   const [controllers, setControllers] =

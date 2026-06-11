@@ -1,75 +1,130 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Modal } from 'antd'
-import { ChevronDown, Sparkles, Upload } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Modal, message } from 'antd'
+import { ChevronDown, Sparkles } from 'lucide-react'
 import FormControl, { controlClass, textareaClass } from './FormControl'
+import ImageUploader from '../common/ImageUploader'
+import {
+  uploadImageFile,
+  useGetPresignedUploadUrlMutation,
+} from '../../redux/api/imageUploadApi'
+import type { CreatePromotionPayload, PromotionApiType } from '../../redux/api/homeControllerApi'
 
-type PromotionType =
+type PromotionTypeLabel =
   | 'Billboard Carousel'
   | 'Latest Promotions'
   | 'Sponsored Deals'
 
 type FormState = {
   title: string
-  details: string
-  type: PromotionType
+  description: string
+  type: PromotionTypeLabel
   startDate: string
   endDate: string
-  shop: string
-  product: string
-  price: string
-  websiteLink: string
-  media: File | null
+  promotionPrice: string
+  websiteUrl: string
+  attachment: string
 }
 
 const initialState: FormState = {
   title: '',
-  details: '',
+  description: '',
   type: 'Billboard Carousel',
   startDate: '',
   endDate: '',
-  shop: '',
-  product: '',
-  price: '',
-  websiteLink: '',
-  media: null,
+  promotionPrice: '',
+  websiteUrl: '',
+  attachment: '',
 }
 
-const promotionTypes: PromotionType[] = [
+const promotionTypes: PromotionTypeLabel[] = [
   'Billboard Carousel',
   'Latest Promotions',
   'Sponsored Deals',
 ]
 
-const shops = ['Burger King', 'Solaris Energy', 'Blue Note Lounge']
-const products = ['Burger', 'Fries', 'Coffee', 'Cocktail']
+const promotionTypeToApi: Record<PromotionTypeLabel, PromotionApiType> = {
+  'Billboard Carousel': 'bilboard_courosel',
+  'Latest Promotions': 'latest_promotions',
+  'Sponsored Deals': 'sponsored_deals',
+}
+
+export function toCreatePromotionPayload(form: FormState): CreatePromotionPayload {
+  return {
+    title: form.title.trim(),
+    description: form.description.trim(),
+    type: promotionTypeToApi[form.type],
+    startDate: `${form.startDate}T00:00:00.000Z`,
+    endDate: `${form.endDate}T23:59:59.000Z`,
+    promotionPrice: Number(form.promotionPrice),
+    attachment: form.attachment,
+    ...(form.websiteUrl.trim() ? { websiteUrl: form.websiteUrl.trim() } : {}),
+  }
+}
 
 type Props = {
   open: boolean
   onClose: () => void
-  onSubmit?: (data: FormState) => void
+  onSubmit?: (payload: CreatePromotionPayload) => void | Promise<void>
+  isSubmitting?: boolean
 }
 
-export default function AddPromotionModal({ open, onClose, onSubmit }: Props) {
-  const fileInput = useRef<HTMLInputElement>(null)
+export default function AddPromotionModal({
+  open,
+  onClose,
+  onSubmit,
+  isSubmitting = false,
+}: Props) {
   const [form, setForm] = useState<FormState>(initialState)
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [getPresignedUrl] = useGetPresignedUploadUrlMutation()
+
+  const isBusy = isSubmitting || isUploading
+  const hasImage = Boolean(attachmentFile || form.attachment)
+
+  useEffect(() => {
+    if (!open) return
+    setForm(initialState)
+    setAttachmentFile(null)
+    setIsUploading(false)
+  }, [open])
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
-  const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    update('media', file)
-  }
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    onSubmit?.(form)
-    setForm(initialState)
-    onClose()
+
+    if (!attachmentFile && !form.attachment) return
+
+    let attachment = form.attachment
+
+    if (attachmentFile) {
+      setIsUploading(true)
+      try {
+        attachment = await uploadImageFile(attachmentFile, async (payload) => {
+          const result = await getPresignedUrl(payload).unwrap()
+          return result
+        })
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Image upload failed.'
+        message.error(errorMessage)
+        setIsUploading(false)
+        return
+      }
+      setIsUploading(false)
+    }
+
+    await onSubmit?.(
+      toCreatePromotionPayload({ ...form, attachment }),
+    )
   }
 
   const handleClose = () => {
+    if (isBusy) return
     setForm(initialState)
+    setAttachmentFile(null)
     onClose()
   }
 
@@ -107,36 +162,55 @@ export default function AddPromotionModal({ open, onClose, onSubmit }: Props) {
                 type="text"
                 value={form.title}
                 onChange={(e) => update('title', e.target.value)}
-                placeholder="Sabbir Ahmed"
+                placeholder="Summer Discount Campaign"
                 className={controlClass}
                 required
+                disabled={isBusy}
               />
             </FormControl>
 
-            <FormControl label="Promotion Details">
+            <FormControl label="Promotion Details" required>
               <textarea
-                value={form.details}
-                onChange={(e) => update('details', e.target.value)}
-                placeholder="An intimate evening of smooth jazz and cocktails at the Blue Note Lounge."
+                value={form.description}
+                onChange={(e) => update('description', e.target.value)}
+                placeholder="Get up to 30% off on selected services during summer season."
                 className={textareaClass}
+                required
+                disabled={isBusy}
               />
             </FormControl>
 
             <FormControl label="Promotion Type" required>
               <SelectField
                 value={form.type}
-                onChange={(v) => update('type', v as PromotionType)}
+                onChange={(v) => update('type', v as PromotionTypeLabel)}
                 options={promotionTypes}
+                disabled={isBusy}
               />
             </FormControl>
 
-            <FormControl label="Promotion start Date" required>
+            <FormControl label="Promotion Price" required>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.promotionPrice}
+                onChange={(e) => update('promotionPrice', e.target.value)}
+                placeholder="30"
+                className={controlClass}
+                required
+                disabled={isBusy}
+              />
+            </FormControl>
+
+            <FormControl label="Promotion Start Date" required>
               <input
                 type="date"
                 value={form.startDate}
                 onChange={(e) => update('startDate', e.target.value)}
                 className={controlClass}
                 required
+                disabled={isBusy}
               />
             </FormControl>
 
@@ -145,71 +219,34 @@ export default function AddPromotionModal({ open, onClose, onSubmit }: Props) {
                 type="date"
                 value={form.endDate}
                 onChange={(e) => update('endDate', e.target.value)}
+                min={form.startDate || undefined}
                 className={controlClass}
                 required
+                disabled={isBusy}
               />
             </FormControl>
 
-            <FormControl label="Select Shop" required>
-              <SelectField
-                value={form.shop}
-                onChange={(v) => update('shop', v)}
-                options={shops}
-                placeholder="Select a shop"
-              />
-            </FormControl>
-
-            <FormControl label="Select Product" required>
-              <SelectField
-                value={form.product}
-                onChange={(v) => update('product', v)}
-                options={products}
-                placeholder="Select a product"
-              />
-            </FormControl>
-
-            <FormControl label="Product Price" required>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.price}
-                onChange={(e) => update('price', e.target.value)}
-                placeholder="$50.00"
-                className={controlClass}
-                required
-              />
-            </FormControl>
-
-            <FormControl label="Add Website Link">
+            <FormControl label="Website Link">
               <input
                 type="url"
-                value={form.websiteLink}
-                onChange={(e) => update('websiteLink', e.target.value)}
-                placeholder="https://example.com"
+                value={form.websiteUrl}
+                onChange={(e) => update('websiteUrl', e.target.value)}
+                placeholder="https://www.example.com/summer-sale"
                 className={controlClass}
+                disabled={isBusy}
               />
             </FormControl>
 
-            <FormControl label="Upload picture/Video">
-              <button
-                type="button"
-                onClick={() => fileInput.current?.click()}
-                className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-brand bg-transparent text-sm text-gray-300 transition-colors hover:bg-brand/5"
-              >
-                <Upload size={26} />
-                <span className="truncate px-4">
-                  {form.media ? form.media.name : 'Upload Media Picture'}
-                </span>
-              </button>
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/*,video/*"
-                onChange={onFileChange}
-                className="hidden"
+            <div className="lg:col-span-2">
+              <ImageUploader
+                label="Promotion Banner"
+                required
+                value={form.attachment}
+                onFileSelect={setAttachmentFile}
+                disabled={isBusy}
+                hint="Select a banner image — it uploads when you submit"
               />
-            </FormControl>
+            </div>
           </div>
         </div>
 
@@ -217,15 +254,21 @@ export default function AddPromotionModal({ open, onClose, onSubmit }: Props) {
           <button
             type="button"
             onClick={handleClose}
-            className="h-10 rounded-md border border-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand/10"
+            disabled={isBusy}
+            className="h-10 rounded-md border border-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+            disabled={isBusy || !hasImage}
+            className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Create New Promotion
+            {isUploading
+              ? 'Uploading image...'
+              : isSubmitting
+                ? 'Creating...'
+                : 'Create New Promotion'}
           </button>
         </footer>
       </form>
@@ -238,6 +281,7 @@ type SelectFieldProps = {
   onChange: (value: string) => void
   options: string[]
   placeholder?: string
+  disabled?: boolean
 }
 
 function SelectField({
@@ -245,13 +289,15 @@ function SelectField({
   onChange,
   options,
   placeholder,
+  disabled = false,
 }: SelectFieldProps) {
   return (
     <div className="relative">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${controlClass} appearance-none pr-10`}
+        disabled={disabled}
+        className={`${controlClass} appearance-none pr-10 disabled:cursor-not-allowed disabled:opacity-60`}
       >
         {placeholder && (
           <option value="" disabled>

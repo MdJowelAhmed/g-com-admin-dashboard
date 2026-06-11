@@ -1,18 +1,24 @@
 import { Outlet, useNavigate } from 'react-router-dom'
 import Sidebar from '../components/dashboard/Sidebar'
 import Topbar from '../components/dashboard/Topbar'
-
-const currentUser = {
-  name: 'Sabbir Ahmed',
-  location: 'Elmina Castle, Ghana',
-}
+import { useAuth } from '../context/AuthContext'
 
 export default function DashboardLayout() {
   const navigate = useNavigate()
+  const { user, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  // Fallback while auth state is resolving (should not happen in practice
+  // since ProtectedRoute guards this layout, but keeps TypeScript happy).
+  if (!user) return null
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-page text-gray-100">
-      <Sidebar user={currentUser} onLogout={() => navigate('/login')} />
+      <Sidebar user={user} onLogout={handleLogout} />
       <div className="flex h-screen min-w-0 flex-1 flex-col">
         <Topbar />
         <main className="flex-1 overflow-y-auto px-8 pb-10">
@@ -22,3 +28,4 @@ export default function DashboardLayout() {
     </div>
   )
 }
+

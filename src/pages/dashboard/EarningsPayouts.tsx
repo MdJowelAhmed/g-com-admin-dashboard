@@ -10,7 +10,7 @@ import {
   feeFor,
   initialTransactions,
   type Transaction,
-} from '../../components/dashboard/payoutData'
+} from '../../data/payoutData'
 
 const formatUsd = (n: number) =>
   `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`

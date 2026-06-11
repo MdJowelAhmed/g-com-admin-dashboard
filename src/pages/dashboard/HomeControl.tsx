@@ -1,69 +1,102 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { message, Spin } from 'antd'
 import { Plus } from 'lucide-react'
 import PromotionsTable, {
   type Promotion,
+  type PromotionStatus,
 } from '../../components/dashboard/PromotionsTable'
 import AddPromotionModal from '../../components/dashboard/AddPromotionModal'
+import {
+  type CreatePromotionPayload,
+  type PromotionApiDoc,
+  type PromotionApiType,
+  useCreatePromotionMutation,
+  useGetPromotionsQuery,
+} from '../../redux/api/homeControllerApi'
 
-const initialPromotions: Promotion[] = [
-  {
-    key: '1',
-    sl: '01',
-    image:
-      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=120&h=120&fit=crop',
-    title: 'Americano',
-    startDate: '27 Oct 2025',
-    startTime: '13:00 pm',
-    endDate: '27 Oct 2025',
-    endTime: '13:00 pm',
-    type: 'Billboard Carousel',
-    amount: 65,
-    status: 'Completed',
-    published: true,
-  },
-  {
-    key: '2',
-    sl: '02',
-    image:
-      'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=120&h=120&fit=crop',
-    title: 'Cappuccino',
-    startDate: '28 Oct 2025',
-    startTime: '09:30 am',
-    endDate: '27 Oct 2025',
-    endTime: '13:00 pm',
-    type: 'Latest Promotions',
-    amount: 45,
-    status: 'Pending',
-    published: true,
-  },
-  {
-    key: '3',
-    sl: '03',
-    image:
-      'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=120&h=120&fit=crop',
-    title: 'Latte',
-    startDate: '29 Oct 2025',
-    startTime: '15:45 pm',
-    endDate: '27 Oct 2025',
-    endTime: '13:00 pm',
-    type: 'Sponsored Deals',
-    amount: 78,
-    status: 'In Progress',
-    published: false,
-  },
-]
+const promotionTypeLabels: Record<PromotionApiType, string> = {
+  bilboard_courosel: 'Billboard Carousel',
+  latest_promotions: 'Latest Promotions',
+  sponsored_deals: 'Sponsored Deals',
+}
+
+function formatPromotionDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function formatPromotionTime(iso: string) {
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function getPromotionStatus(startDate: string, endDate: string): PromotionStatus {
+  const now = Date.now()
+  const start = new Date(startDate).getTime()
+  const end = new Date(endDate).getTime()
+
+  if (now > end) return 'Completed'
+  if (now >= start) return 'In Progress'
+  return 'Pending'
+}
+
+function mapPromotionToTableRow(
+  doc: PromotionApiDoc,
+  index: number,
+): Promotion {
+  return {
+    key: doc._id,
+    sl: String(index + 1).padStart(2, '0'),
+    image: doc.attachment,
+    title: doc.title,
+    startDate: formatPromotionDate(doc.startDate),
+    startTime: formatPromotionTime(doc.startDate),
+    endDate: formatPromotionDate(doc.endDate),
+    endTime: formatPromotionTime(doc.endDate),
+    type: promotionTypeLabels[doc.type] ?? doc.type,
+    amount: doc.promotionPrice,
+    status: getPromotionStatus(doc.startDate, doc.endDate),
+    published: doc.isPublished,
+  }
+}
 
 export default function HomeControl() {
-  const [promotions, setPromotions] = useState(initialPromotions)
   const [modalOpen, setModalOpen] = useState(false)
+  const { data, isLoading, isError } = useGetPromotionsQuery()
+  const [createPromotion, { isLoading: isCreating }] =
+    useCreatePromotionMutation()
 
-  const handleDelete = (key: string) =>
-    setPromotions((prev) => prev.filter((p) => p.key !== key))
+  const promotions = useMemo(
+    () => (data?.data ?? []).map(mapPromotionToTableRow),
+    [data],
+  )
 
-  const handleTogglePublish = (key: string, next: boolean) =>
-    setPromotions((prev) =>
-      prev.map((p) => (p.key === key ? { ...p, published: next } : p)),
-    )
+  const handleCreate = async (payload: CreatePromotionPayload) => {
+    try {
+      const result = await createPromotion(payload).unwrap()
+      message.success(result.message || 'Promotion created successfully.')
+      setModalOpen(false)
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to create promotion.'
+      message.error(errorMessage)
+    }
+  }
+
+  const handleDelete = (_key: string) => {
+    message.info('Delete promotion is not available yet.')
+  }
+
+  const handleTogglePublish = (_key: string, _next: boolean) => {
+    message.info('Publish toggle is not available yet.')
+  }
 
   return (
     <div className="py-6">
@@ -82,17 +115,29 @@ export default function HomeControl() {
         </header>
 
         <div className="mt-6">
-          <PromotionsTable
-            data={promotions}
-            onDelete={handleDelete}
-            onTogglePublish={handleTogglePublish}
-          />
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <Spin size="large" />
+            </div>
+          ) : isError ? (
+            <p className="py-10 text-center text-sm text-red-400">
+              Failed to load promotions. Please try again.
+            </p>
+          ) : (
+            <PromotionsTable
+              data={promotions}
+              onDelete={handleDelete}
+              onTogglePublish={handleTogglePublish}
+            />
+          )}
         </div>
       </section>
 
       <AddPromotionModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
+        onSubmit={handleCreate}
+        isSubmitting={isCreating}
       />
     </div>
   )

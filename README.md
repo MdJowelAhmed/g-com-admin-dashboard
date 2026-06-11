@@ -1,75 +1,61 @@
-# React + TypeScript + Vite
+# G-COM Admin Dashboard (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Admin dashboard built with React + TypeScript + Vite.
 
-Currently, two official plugins are available:
+> Important: this repository is currently **frontend-only** and uses **dummy/mock data**.  
+> Backend API integration will be added later.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
 
-## React Compiler
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- Ant Design
+- React Router
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+## Run Locally
 
-Note: This will impact Vite dev & build performances.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Available Scripts
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `npm run dev` - start dev server
+- `npm run build` - type-check and build
+- `npm run lint` - run ESLint
+- `npm run test` - run unit tests once (Vitest)
+- `npm run test:watch` - run tests in watch mode
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Current Architecture
+
+- `src/pages` - route-level pages
+- `src/components` - reusable UI and page widgets
+- `src/layouts` - app shell/layout wrappers
+- `src/context` - global providers (example: auth state)
+- `src/hooks` - reusable hooks (example: filtered list logic)
+- `src/data` - dummy/mock data source (single canonical source)
+- `src/utils` - shared utility helpers
+
+## Data and API Policy (Until Backend Is Ready)
+
+- Use `src/data/*` as the single source for all mock data imports.
+- Keep page components focused on UI + interaction logic.
+- Avoid mixing raw data definitions inside page components.
+- New features should be written so data access can move to `services` later with minimal refactor.
+
+## Testing Scope (Current Stage)
+
+Since backend is not ready yet, tests should focus on frontend behavior:
+
+- reusable hooks
+- component rendering and interactions
+- local filtering/search/state logic
+
+## Next Planned Step (When Backend Is Ready)
+
+1. Add `src/services/api` for real API calls.
+2. Replace `src/data/*` usages with service responses.
+3. Keep UI components unchanged as much as possible.
