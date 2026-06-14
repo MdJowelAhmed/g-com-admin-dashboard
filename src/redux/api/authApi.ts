@@ -25,7 +25,7 @@ interface LoginCredentials {
 interface ChangePasswordPayload {
     currentPassword: string;
     newPassword: string;
-    confirmNewPassword: string;
+    confirmPassword: string;
 }
 
 interface ChangePasswordResponse {

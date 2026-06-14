@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { message } from 'antd'
 import { Eye, EyeOff } from 'lucide-react'
 import FormControl, { controlClass } from '../FormControl'
-
+import { useChangePasswordMutation } from '../../../redux/api/authApi'
 type PasswordForm = {
   current: string
   next: string
@@ -20,15 +20,19 @@ export default function ChangePasswordTab() {
     confirm: false,
   })
   const [error, setError] = useState<string | null>(null)
-
+  const [changePassword, { isLoading }] = useChangePasswordMutation()
   const toggle = (key: keyof PasswordForm) =>
     setVisible((prev) => ({ ...prev, [key]: !prev[key] }))
 
   const update = (key: keyof PasswordForm, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (!form.current.trim()) {
+      setError('Current password is required.')
+      return
+    }
     if (form.next.length < MIN_LENGTH) {
       setError(`Password must be at least ${MIN_LENGTH} characters.`)
       return
@@ -38,10 +42,22 @@ export default function ChangePasswordTab() {
       return
     }
     setError(null)
-    message.success('Password updated')
-    setForm(EMPTY)
-  }
 
+    try {
+      const result = await changePassword({
+        currentPassword: form.current,
+        newPassword: form.next,
+        confirmPassword: form.confirm,
+      }).unwrap()
+      message.success(result.message || 'Password updated successfully.')
+      setForm(EMPTY)
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to update password.'
+      setError(errorMessage)
+      message.error(errorMessage)
+    }
+  }
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div>
@@ -85,18 +101,22 @@ export default function ChangePasswordTab() {
       <div className="flex items-center justify-end gap-3 border-t border-surface-border pt-5">
         <button
           type="button"
-          onClick={() => setForm(EMPTY)}
-          className="h-10 rounded-md border border-surface-border px-5 text-sm font-medium text-gray-300 hover:text-white"
+          onClick={() => {
+            setForm(EMPTY)
+            setError(null)
+          }}
+          disabled={isLoading}
+          className="h-10 rounded-md border border-surface-border px-5 text-sm font-medium text-gray-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover"
+          disabled={isLoading}
+          className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Update password
-        </button>
-      </div>
+          {isLoading ? 'Updating...' : 'Update password'}
+        </button>      </div>
     </form>
   )
 }
