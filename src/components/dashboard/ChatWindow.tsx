@@ -3,10 +3,25 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
   type FormEvent,
   type KeyboardEvent,
 } from 'react'
-import { CheckCheck, MessageCircle, Paperclip, Send } from 'lucide-react'
+import { message } from 'antd'
+import {
+  CheckCheck,
+  ExternalLink,
+  FileText,
+  Loader2,
+  MessageCircle,
+  Paperclip,
+  Send,
+} from 'lucide-react'
+import {
+  uploadImageFile,
+  useGetPresignedUploadUrlMutation,
+} from '../../redux/api/imageUploadApi'
+import { resolveMediaUrl, type SendMessagePayload } from '../../redux/api/chatApi'
 import { ME_ID, type ChatMessage, type Conversation } from './chatData'
 
 const formatTime = (iso: string) =>
@@ -70,12 +85,22 @@ const buildGroups = (messages: ChatMessage[]): Group[] => {
 
 type Props = {
   conversation: Conversation | null
-  onSend: (conversationId: string, content: string) => void
+  onSend: (payload: SendMessagePayload) => void | Promise<void>
+  isSending?: boolean
 }
 
-export default function ChatWindow({ conversation, onSend }: Props) {
+export default function ChatWindow({
+  conversation,
+  onSend,
+  isSending = false,
+}: Props) {
   const [draft, setDraft] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [getPresignedUrl] = useGetPresignedUploadUrlMutation()
+
+  const isBusy = isSending || isUploading
 
   useEffect(() => {
     setDraft('')
@@ -112,8 +137,12 @@ export default function ChatWindow({ conversation, onSend }: Props) {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     const trimmed = draft.trim()
-    if (!trimmed) return
-    onSend(conversation.id, trimmed)
+    if (!trimmed || isBusy) return
+    void onSend({
+      chat: conversation.id,
+      type: 'text',
+      text: trimmed,
+    })
     setDraft('')
   }
 
@@ -121,6 +150,43 @@ export default function ChatWindow({ conversation, onSend }: Props) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit(e)
+    }
+  }
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    const isImage = file.type.startsWith('image/')
+    const isPdf =
+      file.type === 'application/pdf' ||
+      file.name.toLowerCase().endsWith('.pdf')
+
+    if (!isImage && !isPdf) {
+      message.warning('Only images and PDF documents are supported.')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const publicUrl = await uploadImageFile(file, async (payload) => {
+        const result = await getPresignedUrl(payload).unwrap()
+        return result
+      })
+
+      await onSend({
+        chat: conversation.id,
+        type: isImage ? 'image' : 'file',
+        text: publicUrl,
+        fileName: isImage ? undefined : file.name,
+      })
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to send file.'
+      message.error(errorMessage)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -157,11 +223,8 @@ export default function ChatWindow({ conversation, onSend }: Props) {
         </div>
       </header>
 
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-6 py-5"
-      >
-        <div className="mx-auto flex  flex-col gap-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="mx-auto flex flex-col gap-4">
           {groups.map((group) => {
             if (group.kind === 'divider') {
               return (
@@ -197,26 +260,45 @@ export default function ChatWindow({ conversation, onSend }: Props) {
         <div className="flex items-end gap-3 rounded-xl border border-surface-border bg-surface-page px-3 py-2 focus-within:border-brand">
           <button
             type="button"
-            aria-label="Attach file"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-gray-400 hover:text-white"
+            aria-label="Attach image or PDF"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isBusy}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Paperclip size={18} />
+            {isUploading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Paperclip size={18} />
+            )}
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.pdf,application/pdf"
+            onChange={(event) => void handleFileChange(event)}
+            disabled={isBusy}
+            className="hidden"
+          />
           <textarea
             rows={1}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={`Message ${contact.name}…`}
-            className="max-h-32 flex-1 resize-none bg-transparent py-2 text-sm text-white placeholder:text-gray-500 outline-none"
+            disabled={isBusy}
+            className="max-h-32 flex-1 resize-none bg-transparent py-2 text-sm text-white placeholder:text-gray-500 outline-none disabled:opacity-60"
           />
           <button
             type="submit"
-            disabled={!draft.trim()}
+            disabled={!draft.trim() || isBusy}
             aria-label="Send message"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Send size={16} />
+            {isSending ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Send size={16} />
+            )}
           </button>
         </div>
       </form>
@@ -250,16 +332,7 @@ function MessageGroup({ mine, avatar, messages }: MessageGroupProps) {
         }`}
       >
         {messages.map((msg, idx) => (
-          <div
-            key={msg.id}
-            className={`max-w-full px-4 py-2 text-sm leading-snug ${
-              mine
-                ? 'rounded-2xl rounded-br-md bg-brand text-white'
-                : 'rounded-2xl rounded-bl-md bg-surface-elevated text-gray-100'
-            } ${idx === 0 ? '' : mine ? 'rounded-tr-md' : 'rounded-tl-md'}`}
-          >
-            {msg.content}
-          </div>
+          <MessageBubble key={msg.id} mine={mine} message={msg} idx={idx} />
         ))}
         <div
           className={`flex items-center gap-1.5 text-[10px] text-gray-500 ${
@@ -277,6 +350,60 @@ function MessageGroup({ mine, avatar, messages }: MessageGroupProps) {
       </div>
     </div>
   )
+}
+
+function MessageBubble({
+  mine,
+  message,
+  idx,
+}: {
+  mine: boolean
+  message: ChatMessage
+  idx: number
+}) {
+  const bubbleClass = `max-w-full text-sm leading-snug ${
+    mine
+      ? 'rounded-2xl rounded-br-md bg-brand text-white'
+      : 'rounded-2xl rounded-bl-md bg-surface-elevated text-gray-100'
+  } ${idx === 0 ? '' : mine ? 'rounded-tr-md' : 'rounded-tl-md'}`
+
+  if (message.type === 'image') {
+    const src = resolveMediaUrl(message.content)
+    return (
+      <a
+        href={src}
+        target="_blank"
+        rel="noreferrer"
+        className={`block overflow-hidden ${bubbleClass} p-1`}
+      >
+        <img
+          src={src}
+          alt="Shared image"
+          className="max-h-64 max-w-full rounded-xl object-cover"
+        />
+      </a>
+    )
+  }
+
+  if (message.type === 'file') {
+    const href = resolveMediaUrl(message.content)
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className={`flex items-center gap-3 px-4 py-3 ${bubbleClass} hover:opacity-90`}
+      >
+        <FileText size={22} className="shrink-0" />
+        <span className="min-w-0 flex-1 truncate">
+          {message.fileName ?? 'Document.pdf'}
+        </span>
+        <ExternalLink size={14} className="shrink-0 opacity-70" />
+      </a>
+    )
+  }
+
+  return <div className={`px-4 py-2 ${bubbleClass}`}>{message.content}</div>
 }
 
 function TypingBubble({ avatar }: { avatar: string }) {
@@ -302,4 +429,3 @@ function TypingDot({ delay }: { delay: string }) {
     />
   )
 }
-

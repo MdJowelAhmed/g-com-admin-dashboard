@@ -8,10 +8,14 @@ export type Contact = {
   isTyping?: boolean
 }
 
+export type ChatMessageType = 'text' | 'image' | 'file'
+
 export type ChatMessage = {
   id: string
   senderId: string
+  type: ChatMessageType
   content: string
+  fileName?: string
   sentAt: string
   read?: boolean
 }
@@ -21,6 +25,7 @@ export type Conversation = {
   contact: Contact
   messages: ChatMessage[]
   unread: number
+  searchText?: string
 }
 
 export const initialConversations: Conversation[] = [
@@ -38,6 +43,7 @@ export const initialConversations: Conversation[] = [
     messages: [
       {
         id: 'm-1',
+        type: 'text',
         senderId: 'larry',
         content: 'omg, this is amazing',
         sentAt: '2025-10-27T09:10:00',
@@ -45,6 +51,7 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-2',
+        type: 'text',
         senderId: 'larry',
         content: 'perfect! ✅',
         sentAt: '2025-10-27T09:11:00',
@@ -52,6 +59,7 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-3',
+        type: 'text',
         senderId: 'larry',
         content: 'Wow, this is really epic',
         sentAt: '2025-10-27T09:12:00',
@@ -59,6 +67,7 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-4',
+        type: 'text',
         senderId: ME_ID,
         content: 'woohoooo',
         sentAt: '2025-10-27T09:14:00',
@@ -66,6 +75,7 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-5',
+        type: 'text',
         senderId: ME_ID,
         content: 'Haha oh man',
         sentAt: '2025-10-27T09:14:20',
@@ -73,6 +83,7 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-6',
+        type: 'text',
         senderId: ME_ID,
         content: "Haha that's terrifying 😅",
         sentAt: '2025-10-27T09:15:00',
@@ -80,12 +91,14 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-7',
+        type: 'text',
         senderId: 'larry',
         content: "I've shipped the beta build — can you test tonight?",
         sentAt: '2025-10-27T14:10:00',
       },
       {
         id: 'm-8',
+        type: 'text',
         senderId: 'larry',
         content: 'Woof!Woof!',
         sentAt: '2025-10-27T14:32:00',
@@ -105,6 +118,7 @@ export const initialConversations: Conversation[] = [
     messages: [
       {
         id: 'm-max-1',
+        type: 'text',
         senderId: 'max',
         content: 'Hello',
         sentAt: '2025-10-27T13:52:00',
@@ -124,6 +138,7 @@ export const initialConversations: Conversation[] = [
     messages: [
       {
         id: 'm-l-1',
+        type: 'text',
         senderId: ME_ID,
         content: 'Where are you?',
         sentAt: '2025-10-27T13:10:00',
@@ -131,6 +146,7 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-l-2',
+        type: 'text',
         senderId: 'lemon',
         content: "Just parking — 2 mins out!",
         sentAt: '2025-10-27T13:18:00',
@@ -151,6 +167,7 @@ export const initialConversations: Conversation[] = [
     messages: [
       {
         id: 'm-k-1',
+        type: 'text',
         senderId: 'katy',
         content: 'Hi!',
         sentAt: '2025-10-27T11:00:00',
@@ -158,6 +175,7 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-k-2',
+        type: 'text',
         senderId: ME_ID,
         content: "Hey Katy — how'd the launch go?",
         sentAt: '2025-10-27T11:04:00',
@@ -178,6 +196,7 @@ export const initialConversations: Conversation[] = [
     messages: [
       {
         id: 'm-c-1',
+        type: 'text',
         senderId: 'chedder',
         content: 'Yes',
         sentAt: '2025-10-26T17:30:00',
@@ -198,6 +217,7 @@ export const initialConversations: Conversation[] = [
     messages: [
       {
         id: 'm-d-1',
+        type: 'text',
         senderId: 'daisy',
         content: 'Can we sync about the new brand guidelines?',
         sentAt: '2025-10-25T10:00:00',
@@ -205,6 +225,7 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-d-2',
+        type: 'text',
         senderId: ME_ID,
         content: 'Sure',
         sentAt: '2025-10-25T10:05:00',
@@ -212,12 +233,14 @@ export const initialConversations: Conversation[] = [
       },
       {
         id: 'm-d-3',
+        type: 'text',
         senderId: 'daisy',
         content: 'Friday 3pm works?',
         sentAt: '2025-10-25T10:15:00',
       },
       {
         id: 'm-d-4',
+        type: 'text',
         senderId: 'daisy',
         content: 'Bringing coffee ☕',
         sentAt: '2025-10-25T10:16:00',
@@ -237,6 +260,7 @@ export const initialConversations: Conversation[] = [
     messages: [
       {
         id: 'm-n-1',
+        type: 'text',
         senderId: 'noah',
         content: 'Got a quote from the print shop — will forward.',
         sentAt: '2025-10-22T09:45:00',

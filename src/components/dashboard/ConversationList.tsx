@@ -21,6 +21,10 @@ const previewOf = (conv: Conversation) => {
   const last = conv.messages[conv.messages.length - 1]
   if (!last) return ''
   const prefix = last.senderId === ME_ID ? 'You: ' : ''
+
+  if (last.type === 'image') return `${prefix}Photo`
+  if (last.type === 'file') return `${prefix}${last.fileName ?? 'File'}`
+
   return `${prefix}${last.content}`
 }
 
