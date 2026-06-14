@@ -100,7 +100,7 @@ const subCategoryApi = baseApi.injectEndpoints({
     }),
     deleteSubCategory: builder.mutation<SubCategoryMutationResponse, string>({
       query: (id) => ({
-        url: `/sub-categories/${id}`,
+        url: `/sub-categories/${id}/soft-delete`,
         method: 'DELETE',
       }),
       invalidatesTags: ['SubCategory'],

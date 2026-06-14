@@ -54,6 +54,7 @@ export const baseApi = createApi({
   'Events',
   'Shops',
   'SubCategory',
+  'Setting',
 ],
   
    
