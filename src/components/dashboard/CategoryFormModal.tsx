@@ -1,118 +1,165 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-  type KeyboardEvent,
-} from 'react'
-import { Modal, message } from 'antd'
-import { Boxes, ImagePlus, Plus, X } from 'lucide-react'
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { Modal, Spin, message } from 'antd'
+import { Boxes, Pencil, Plus, X } from 'lucide-react'
 import FormControl, { controlClass } from './FormControl'
 import {
-  nextSubCategoryId,
+  CATEGORY_TO_API,
   type Category,
   type SubCategory,
 } from './categoryData'
-
-export type CategoryFormState = {
-  name: string
-  imageUrl: string
-  subCategories: SubCategory[]
-}
-
-const blankState: CategoryFormState = {
-  name: '',
-  imageUrl: '',
-  subCategories: [],
-}
-
-const fromCategory = (c: Category): CategoryFormState => ({
-  name: c.name,
-  imageUrl: c.imageUrl,
-  subCategories: c.subCategories.map((s) => ({ ...s })),
-})
+import {
+  useCreateSubCategoryMutation,
+  useDeleteSubCategoryMutation,
+  useGetSubCategoriesQuery,
+  useUpdateSubCategoryMutation,
+} from '../../redux/api/subCategoryApi'
 
 type Props = {
   open: boolean
   category: Category | null
   onClose: () => void
-  onSubmit: (data: CategoryFormState) => void
 }
 
-export default function CategoryFormModal({
-  open,
-  category,
-  onClose,
-  onSubmit,
-}: Props) {
-  const fileInput = useRef<HTMLInputElement>(null)
-  const [form, setForm] = useState<CategoryFormState>(blankState)
+export default function CategoryFormModal({ open, category, onClose }: Props) {
   const [subInput, setSubInput] = useState('')
+  const [editingSubId, setEditingSubId] = useState<string | null>(null)
+  const [editingSubName, setEditingSubName] = useState('')
+
+  const apiCategory = category ? CATEGORY_TO_API[category.key] : ''
+  const { data, isLoading, isFetching } = useGetSubCategoriesQuery(
+    { category: apiCategory },
+    { skip: !open || !apiCategory },
+  )
+
+  const [createSubCategory, { isLoading: isCreating }] =
+    useCreateSubCategoryMutation()
+  const [updateSubCategory, { isLoading: isUpdating }] =
+    useUpdateSubCategoryMutation()
+  const [deleteSubCategory, { isLoading: isDeleting }] =
+    useDeleteSubCategoryMutation()
+
+  const isBusy = isCreating || isUpdating || isDeleting
+  const subCategories: SubCategory[] = data?.data?.map((doc) => ({
+    id: doc._id,
+    name: doc.name,
+    status: doc.status,
+  })) ?? []
 
   useEffect(() => {
     if (!open) return
-    setForm(category ? fromCategory(category) : blankState)
     setSubInput('')
-  }, [open, category])
+    setEditingSubId(null)
+    setEditingSubName('')
+  }, [open, category?.key])
 
-  const isEdit = category !== null
-
-  const onImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setForm((prev) => ({ ...prev, imageUrl: URL.createObjectURL(file) }))
-  }
-
-  const addSub = () => {
+  const addSub = async () => {
     const name = subInput.trim()
-    if (!name) return
+    if (!name || !apiCategory) return
+
     if (
-      form.subCategories.some(
-        (s) => s.name.toLowerCase() === name.toLowerCase(),
-      )
+      subCategories.some((sub) => sub.name.toLowerCase() === name.toLowerCase())
     ) {
       message.warning('Sub-category already exists.')
       return
     }
-    setForm((prev) => ({
-      ...prev,
-      subCategories: [...prev.subCategories, { id: nextSubCategoryId(), name }],
-    }))
-    setSubInput('')
+
+    try {
+      const result = await createSubCategory({
+        name,
+        category: apiCategory,
+      }).unwrap()
+      message.success(result.message || 'Sub-category created successfully.')
+      setSubInput('')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to create sub-category.'
+      message.error(errorMessage)
+    }
   }
 
-  const removeSub = (id: string) =>
-    setForm((prev) => ({
-      ...prev,
-      subCategories: prev.subCategories.filter((s) => s.id !== id),
-    }))
+  const removeSub = async (sub: SubCategory) => {
+    try {
+      const result = await deleteSubCategory(sub.id).unwrap()
+      message.success(result.message || 'Sub-category deleted successfully.')
+      if (editingSubId === sub.id) {
+        setEditingSubId(null)
+        setEditingSubName('')
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to delete sub-category.'
+      message.error(errorMessage)
+    }
+  }
+
+  const startEditSub = (sub: SubCategory) => {
+    setEditingSubId(sub.id)
+    setEditingSubName(sub.name)
+  }
+
+  const saveEditSub = async () => {
+    if (!editingSubId || !apiCategory) return
+
+    const name = editingSubName.trim()
+    if (!name) {
+      message.warning('Sub-category name is required.')
+      return
+    }
+
+    const current = subCategories.find((sub) => sub.id === editingSubId)
+    if (!current || current.name === name) {
+      setEditingSubId(null)
+      setEditingSubName('')
+      return
+    }
+
+    try {
+      const result = await updateSubCategory({
+        id: editingSubId,
+        body: { name, category: apiCategory },
+      }).unwrap()
+      message.success(result.message || 'Sub-category updated successfully.')
+      setEditingSubId(null)
+      setEditingSubName('')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to update sub-category.'
+      message.error(errorMessage)
+    }
+  }
 
   const onSubKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      addSub()
+      void addSub()
     }
+  }
+
+  const onEditSubKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      void saveEditSub()
+    }
+    if (e.key === 'Escape') {
+      setEditingSubId(null)
+      setEditingSubName('')
+    }
+  }
+
+  const handleClose = () => {
+    if (isBusy) return
+    onClose()
   }
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) {
-      message.warning('Category name is required.')
-      return
-    }
-    if (!form.imageUrl) {
-      message.warning('Upload a category image.')
-      return
-    }
-    onSubmit({ ...form, name: form.name.trim() })
-    onClose()
+    handleClose()
   }
 
   return (
     <Modal
       open={open}
-      onCancel={onClose}
+      onCancel={handleClose}
       footer={null}
       closable={false}
       width={720}
@@ -128,65 +175,34 @@ export default function CategoryFormModal({
           </div>
           <div>
             <h2 className="text-lg font-semibold text-white">
-              {isEdit ? 'Edit Category' : 'New Category'}
+              Manage {category?.name ?? 'Category'}
             </h2>
             <p className="text-xs text-gray-400">
-              Pick a name, cover image, and list the sub-categories.
+              Add, edit, or remove sub-categories for this hub.
             </p>
           </div>
         </header>
 
         <div className="max-h-[72vh] overflow-y-auto px-7 py-6">
           <div className="space-y-5">
-            <FormControl label="Cover Image" required>
-              <button
-                type="button"
-                onClick={() => fileInput.current?.click()}
-                className="group relative flex h-48 w-full items-center justify-center overflow-hidden rounded-md border border-dashed border-brand bg-transparent transition-colors hover:bg-brand/5"
-              >
-                {form.imageUrl ? (
-                  <>
-                    <img
-                      src={form.imageUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                      <span className="flex items-center gap-2 rounded-md bg-black/60 px-3 py-1.5 text-xs font-medium text-white">
-                        <ImagePlus size={14} />
-                        Change image
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-gray-300">
-                    <ImagePlus size={28} />
-                    <span className="text-sm">Click to upload category image</span>
-                    <span className="text-[11px] text-gray-500">
-                      Recommended: 1200×750 px
-                    </span>
-                  </div>
-                )}
-              </button>
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/*"
-                onChange={onImageChange}
-                className="hidden"
-              />
+            <FormControl label="Cover Image">
+              <div className="relative flex h-48 w-full overflow-hidden rounded-md border border-surface-border bg-surface-elevated">
+                {category?.imageUrl ? (
+                  <img
+                    src={category.imageUrl}
+                    alt={category.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </div>
             </FormControl>
 
-            <FormControl label="Category Name" required>
+            <FormControl label="Category Name">
               <input
                 type="text"
-                value={form.name}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, name: e.target.value }))
-                }
-                placeholder="e.g. Electronics"
-                className={controlClass}
-                required
+                value={category?.name ?? ''}
+                readOnly
+                className={`${controlClass} cursor-not-allowed opacity-70`}
               />
             </FormControl>
 
@@ -196,8 +212,8 @@ export default function CategoryFormModal({
                   Sub-categories
                 </span>
                 <span className="text-xs text-gray-400">
-                  {form.subCategories.length}{' '}
-                  {form.subCategories.length === 1 ? 'item' : 'items'}
+                  {subCategories.length}{' '}
+                  {subCategories.length === 1 ? 'item' : 'items'}
                 </span>
               </div>
 
@@ -209,11 +225,12 @@ export default function CategoryFormModal({
                   onKeyDown={onSubKeyDown}
                   placeholder="Type a sub-category name and press Enter"
                   className={controlClass}
+                  disabled={isBusy}
                 />
                 <button
                   type="button"
-                  onClick={addSub}
-                  disabled={!subInput.trim()}
+                  onClick={() => void addSub()}
+                  disabled={!subInput.trim() || isBusy}
                   className="flex h-12 shrink-0 items-center gap-1.5 rounded-md bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Plus size={15} />
@@ -222,22 +239,56 @@ export default function CategoryFormModal({
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                {form.subCategories.length === 0 ? (
+                {isLoading || isFetching ? (
+                  <div className="flex w-full items-center justify-center py-8">
+                    <Spin />
+                  </div>
+                ) : subCategories.length === 0 ? (
                   <div className="flex w-full items-center justify-center rounded-md border border-dashed border-surface-border py-6 text-xs text-gray-400">
                     No sub-categories added yet.
                   </div>
                 ) : (
-                  form.subCategories.map((sub) => (
+                  subCategories.map((sub) => (
                     <span
                       key={sub.id}
                       className="flex items-center gap-1.5 rounded-full border border-surface-border bg-surface-elevated py-1 pl-3 pr-1 text-sm text-white"
                     >
-                      {sub.name}
+                      {editingSubId === sub.id ? (
+                        <input
+                          type="text"
+                          value={editingSubName}
+                          onChange={(e) => setEditingSubName(e.target.value)}
+                          onKeyDown={onEditSubKeyDown}
+                          onBlur={() => void saveEditSub()}
+                          autoFocus
+                          disabled={isBusy}
+                          className="w-28 bg-transparent text-sm text-white outline-none"
+                        />
+                      ) : (
+                        <>
+                          <span>{sub.name}</span>
+                          {sub.status === 'archive' && (
+                            <span className="text-[10px] uppercase text-gray-400">
+                              archived
+                            </span>
+                          )}
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        aria-label={`Edit ${sub.name}`}
+                        onClick={() => startEditSub(sub)}
+                        disabled={isBusy}
+                        className="flex h-5 w-5 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-brand/20 hover:text-brand-hover disabled:opacity-50"
+                      >
+                        <Pencil size={11} />
+                      </button>
                       <button
                         type="button"
                         aria-label={`Remove ${sub.name}`}
-                        onClick={() => removeSub(sub.id)}
-                        className="flex h-5 w-5 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
+                        onClick={() => void removeSub(sub)}
+                        disabled={isBusy}
+                        className="flex h-5 w-5 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-red-500/20 hover:text-red-300 disabled:opacity-50"
                       >
                         <X size={12} />
                       </button>
@@ -252,16 +303,18 @@ export default function CategoryFormModal({
         <footer className="flex items-center justify-end gap-3 border-t border-surface-border px-7 py-4">
           <button
             type="button"
-            onClick={onClose}
-            className="h-10 rounded-md border border-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand/10"
+            onClick={handleClose}
+            disabled={isBusy}
+            className="h-10 rounded-md border border-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+            disabled={isBusy}
+            className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isEdit ? 'Save Changes' : 'Create Category'}
+            Done
           </button>
         </footer>
       </form>
