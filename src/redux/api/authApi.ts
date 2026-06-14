@@ -58,59 +58,41 @@ interface ResetPasswordResponse {
 interface GetMyProfileResponse {
     success: boolean;
     message: string;
-    data: {
-        _id: string;
-        name: string;
-        email: string;
-        role: string;
-        profile?: string;
-        status: string;
-        isVerified: boolean;
-        isPhoneVerified: boolean;
-        isEmailVerified: boolean;
-        isDeleted: boolean;
-        authProviders: string[];
-        createdAt: string;
-        updatedAt: string;
-        __v: number;
-    };
+    data: UserProfile;
+}
+
+export interface UserProfile {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    profileImage: string;
+    image: string;
+    address: string;
+    status: string;
+    isVerified: boolean;
+    isOnline: boolean;
+    isDeleted: boolean;
+    authProviders: string[];
+    business: unknown | null;
+    customer: unknown | null;
+    createdAt: string;
+    updatedAt: string;
+    __v?: number;
 }
 
 interface UpdateMyProfileResponse {
     success: boolean;
     message: string;
-    data: GetMyProfileResponse['data'];
+    data: UserProfile;
 }
 
 export interface UpdateMyProfilePayload {
     name?: string;
-    profileImage?: File | null;
-}
-
-export function buildProfileFormData(
-    data: {
-        name: string;
-        email: string;
-        contact: string;
-        address?: string;
-        city?: string;
-        country?: string;
-    },
-    profileFile?: File | null
-): FormData {
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('email', data.email);
-    formData.append('contact', data.contact);
-    formData.append('address', data.address ?? '');
-    formData.append('city', data.city ?? '');
-    formData.append('country', data.country ?? '');
-
-    if (profileFile instanceof File) {
-        formData.append('profile', profileFile, profileFile.name);
-    }
-
-    return formData;
+    phone?: string;
+    address?: string;
+    profileImage?: string;
 }
 
 const authApi = baseApi.injectEndpoints({
@@ -258,37 +240,18 @@ const authApi = baseApi.injectEndpoints({
 
         getMyProfile: builder.query<GetMyProfileResponse, void>({
             query: () => ({
-                url: '/user/profile',
+                url: '/users/profile',
                 method: 'GET',
             }),
             providesTags: ['Auth'],
         }),
 
-        updateMyProfile: builder.mutation<UpdateMyProfileResponse, FormData>({
-            query: (formData) => ({
-                url: '/user/profile',
+        updateMyProfile: builder.mutation<UpdateMyProfileResponse, UpdateMyProfilePayload>({
+            query: (body) => ({
+                url: '/users/profile',
                 method: 'PATCH',
-                body: formData,
+                body,
             }),
-            invalidatesTags: ['Auth'],
-        }), Profile: builder.mutation<UpdateMyProfileResponse, UpdateMyProfilePayload>({
-            query: ({ name, profileImage }) => {
-                const formData = new FormData();
-
-                if (name) {
-                    formData.append('name', name);
-                }
-
-                if (profileImage) {
-                    formData.append('profileImage', profileImage);
-                }
-
-                return {
-                    url: '/user/profile',
-                    method: 'PATCH',
-                    body: formData,
-                };
-            },
             invalidatesTags: ['Auth'],
         }),
 
