@@ -72,9 +72,13 @@ export interface EventMutationResponse {
   data?: EventApiDoc
 }
 
+export type UpdateEventBody = Partial<EventPayload> & {
+  status?: EventApiStatus
+}
+
 export interface UpdateEventArgs {
   id: string
-  body: EventPayload
+  body: UpdateEventBody
 }
 
 function splitIsoDateTime(iso: string) {
@@ -231,6 +235,13 @@ const eventApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Events'],
     }),
+    deleteEvent: builder.mutation<EventMutationResponse, string>({
+      query: (id) => ({
+        url: `/events/${id}/soft-delete`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Events'],
+    }),
   }),
 })
 
@@ -238,4 +249,5 @@ export const {
   useCreateEventMutation,
   useGetEventsQuery,
   useUpdateEventMutation,
+  useDeleteEventMutation,
 } = eventApi

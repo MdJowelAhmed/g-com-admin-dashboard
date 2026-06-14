@@ -14,6 +14,7 @@ import {
   mapEventFromApi,
   type EventPayload,
   useCreateEventMutation,
+  useDeleteEventMutation,
   useGetEventsQuery,
   useUpdateEventMutation,
 } from '../../redux/api/eventApi'
@@ -55,6 +56,7 @@ export default function EventManagement() {
   const { data, isLoading, isError } = useGetEventsQuery({})
   const [createEvent, { isLoading: isCreating }] = useCreateEventMutation()
   const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation()
+  const [deleteEvent] = useDeleteEventMutation()
 
   const isSubmitting = isCreating || isUpdating
 
@@ -112,12 +114,31 @@ export default function EventManagement() {
     }
   }
 
-  const handleDelete = (_key: string) => {
-    message.info('Delete event is not available yet.')
+  const handleDelete = async (key: string) => {
+    try {
+      const result = await deleteEvent(key).unwrap()
+      message.success(result.message || 'Event deleted successfully.')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to delete event.'
+      message.error(errorMessage)
+    }
   }
 
-  const handleToggleActive = (_key: string, _next: boolean) => {
-    message.info('Activate/deactivate is not available yet.')
+  const handleToggleActive = async (key: string, next: boolean) => {
+    try {
+      const result = await updateEvent({
+        id: key,
+        body: { status: next ? 'active' : 'inactive' },
+      }).unwrap()
+      message.success(result.message || 'Event status updated successfully.')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to update event status.'
+      message.error(errorMessage)
+    }
   }
 
   return (
