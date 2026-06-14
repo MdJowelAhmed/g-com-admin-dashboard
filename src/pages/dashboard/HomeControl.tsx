@@ -11,7 +11,9 @@ import {
   type PromotionApiDoc,
   type PromotionApiType,
   useCreatePromotionMutation,
+  useDeletePromotionMutation,
   useGetPromotionsQuery,
+  useUpdatePromotionMutation,
 } from '../../redux/api/homeControllerApi'
 
 const promotionTypeLabels: Record<PromotionApiType, string> = {
@@ -66,36 +68,95 @@ function mapPromotionToTableRow(
 }
 
 export default function HomeControl() {
-  const [modalOpen, setModalOpen] = useState(false)
-  const { data, isLoading, isError } = useGetPromotionsQuery()
+  const [formMode, setFormMode] = useState<{
+    open: boolean
+    promotion: PromotionApiDoc | null
+  }>({ open: false, promotion: null })
+
+  const { data, isLoading, isError } = useGetPromotionsQuery(undefined)
   const [createPromotion, { isLoading: isCreating }] =
     useCreatePromotionMutation()
+  const [updatePromotion, { isLoading: isUpdating }] =
+    useUpdatePromotionMutation()
+  const [deletePromotion] = useDeletePromotionMutation()
+
+  const isSubmitting = isCreating || isUpdating
 
   const promotions = useMemo(
     () => (data?.data ?? []).map(mapPromotionToTableRow),
     [data],
   )
 
-  const handleCreate = async (payload: CreatePromotionPayload) => {
+  const openCreate = () => setFormMode({ open: true, promotion: null })
+
+  const openEdit = (key: string) => {
+    const promotion = (data?.data ?? []).find((doc) => doc._id === key)
+    if (!promotion) {
+      message.error('Promotion not found.')
+      return
+    }
+    setFormMode({ open: true, promotion })
+  }
+
+  const closeForm = () => {
+    if (isSubmitting) return
+    setFormMode({ open: false, promotion: null })
+  }
+
+  const handleSubmit = async (payload: CreatePromotionPayload) => {
     try {
-      const result = await createPromotion(payload).unwrap()
-      message.success(result.message || 'Promotion created successfully.')
-      setModalOpen(false)
+      if (formMode.promotion) {
+        const result = await updatePromotion({
+          id: formMode.promotion._id,
+          body: payload,
+        }).unwrap()
+        message.success(result.message || 'Promotion updated successfully.')
+      } else {
+        const result = await createPromotion(payload).unwrap()
+        message.success(result.message || 'Promotion created successfully.')
+      }
+      setFormMode({ open: false, promotion: null })
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Failed to create promotion.'
+          : formMode.promotion
+            ? 'Failed to update promotion.'
+            : 'Failed to create promotion.'
       message.error(errorMessage)
     }
   }
 
-  const handleDelete = (_key: string) => {
-    message.info('Delete promotion is not available yet.')
+  const handleDelete = async (key: string) => {
+    try {
+      const result = await deletePromotion(key).unwrap()
+      message.success(result.message || 'Promotion deleted successfully.')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to delete promotion.'
+      message.error(errorMessage)
+    }
   }
 
-  const handleTogglePublish = (_key: string, _next: boolean) => {
-    message.info('Publish toggle is not available yet.')
+  const handleTogglePublish = async (key: string, next: boolean) => {
+    try {
+      const result = await updatePromotion({
+        id: key,
+        body: { isPublished: next },
+      }).unwrap()
+      message.success(
+        result.message ||
+          (next ? 'Promotion published.' : 'Promotion hidden.'),
+      )
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to update publish status.'
+      message.error(errorMessage)
+    }
   }
 
   return (
@@ -106,7 +167,7 @@ export default function HomeControl() {
 
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={openCreate}
             className="flex h-10 items-center gap-2 rounded-md bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
           >
             <Plus size={16} />
@@ -126,6 +187,7 @@ export default function HomeControl() {
           ) : (
             <PromotionsTable
               data={promotions}
+              onEdit={openEdit}
               onDelete={handleDelete}
               onTogglePublish={handleTogglePublish}
             />
@@ -134,10 +196,11 @@ export default function HomeControl() {
       </section>
 
       <AddPromotionModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleCreate}
-        isSubmitting={isCreating}
+        open={formMode.open}
+        promotion={formMode.promotion}
+        onClose={closeForm}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
       />
     </div>
   )

@@ -55,6 +55,21 @@ export interface CreatePromotionResponse {
   data?: PromotionApiDoc
 }
 
+export interface PromotionMutationResponse {
+  success: boolean
+  message: string
+  data?: PromotionApiDoc
+}
+
+export type UpdatePromotionBody = Partial<CreatePromotionPayload> & {
+  isPublished?: boolean
+}
+
+export interface UpdatePromotionPayload {
+  id: string
+  body: UpdatePromotionBody
+}
+
 export interface GetPromotionsParams {
   page?: number
   limit?: number
@@ -84,10 +99,27 @@ const homeControllerApi = baseApi.injectEndpoints({
       }),
       providesTags: ['Promotions'],
     }),
+    updatePromotion: builder.mutation<PromotionMutationResponse, UpdatePromotionPayload>({
+      query: ({ id, body }) => ({
+        url: `/promotions/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Promotions'],
+    }),
+    deletePromotion: builder.mutation<PromotionMutationResponse, string>({
+      query: (id) => ({
+        url: `/promotions/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Promotions'],
+    }),
   }),
 })
 
 export const {
   useCreatePromotionMutation,
   useGetPromotionsQuery,
+  useUpdatePromotionMutation,
+  useDeletePromotionMutation,
 } = homeControllerApi

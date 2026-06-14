@@ -1,6 +1,6 @@
 import { Popconfirm, Switch, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { CheckCircle2, Trash2 } from 'lucide-react'
+import { CheckCircle2, Pencil, Trash2 } from 'lucide-react'
 
 export type PromotionStatus = 'Completed' | 'Pending' | 'In Progress'
 
@@ -89,12 +89,14 @@ const baseColumns: ColumnsType<Promotion> = [
 
 type Props = {
   data: Promotion[]
+  onEdit: (key: string) => void
   onDelete: (key: string) => void
   onTogglePublish: (key: string, next: boolean) => void
 }
 
 export default function PromotionsTable({
   data,
+  onEdit,
   onDelete,
   onTogglePublish,
 }: Props) {
@@ -103,9 +105,17 @@ export default function PromotionsTable({
     {
       title: 'Action',
       key: 'action',
-      width: 180,
+      width: 220,
       render: (_, record) => (
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label={`Edit ${record.title}`}
+            onClick={() => onEdit(record.key)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-surface-border text-amber-400 transition-colors hover:border-amber-500 hover:bg-amber-500/10 hover:text-amber-300"
+          >
+            <Pencil size={16} />
+          </button>
           <Switch
             checked={record.published}
             onChange={(checked) => onTogglePublish(record.key, checked)}

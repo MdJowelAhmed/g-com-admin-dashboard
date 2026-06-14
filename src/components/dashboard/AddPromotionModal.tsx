@@ -7,7 +7,11 @@ import {
   uploadImageFile,
   useGetPresignedUploadUrlMutation,
 } from '../../redux/api/imageUploadApi'
-import type { CreatePromotionPayload, PromotionApiType } from '../../redux/api/homeControllerApi'
+import type {
+  CreatePromotionPayload,
+  PromotionApiDoc,
+  PromotionApiType,
+} from '../../redux/api/homeControllerApi'
 
 type PromotionTypeLabel =
   | 'Billboard Carousel'
@@ -48,6 +52,25 @@ const promotionTypeToApi: Record<PromotionTypeLabel, PromotionApiType> = {
   'Sponsored Deals': 'sponsored_deals',
 }
 
+const apiToPromotionType: Record<PromotionApiType, PromotionTypeLabel> = {
+  bilboard_courosel: 'Billboard Carousel',
+  latest_promotions: 'Latest Promotions',
+  sponsored_deals: 'Sponsored Deals',
+}
+
+function fromPromotion(doc: PromotionApiDoc): FormState {
+  return {
+    title: doc.title,
+    description: doc.description,
+    type: apiToPromotionType[doc.type],
+    startDate: doc.startDate.slice(0, 10),
+    endDate: doc.endDate.slice(0, 10),
+    promotionPrice: String(doc.promotionPrice),
+    websiteUrl: doc.websiteUrl ?? '',
+    attachment: doc.attachment,
+  }
+}
+
 export function toCreatePromotionPayload(form: FormState): CreatePromotionPayload {
   return {
     title: form.title.trim(),
@@ -63,6 +86,7 @@ export function toCreatePromotionPayload(form: FormState): CreatePromotionPayloa
 
 type Props = {
   open: boolean
+  promotion?: PromotionApiDoc | null
   onClose: () => void
   onSubmit?: (payload: CreatePromotionPayload) => void | Promise<void>
   isSubmitting?: boolean
@@ -70,10 +94,12 @@ type Props = {
 
 export default function AddPromotionModal({
   open,
+  promotion = null,
   onClose,
   onSubmit,
   isSubmitting = false,
 }: Props) {
+  const isEdit = Boolean(promotion)
   const [form, setForm] = useState<FormState>(initialState)
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -84,10 +110,10 @@ export default function AddPromotionModal({
 
   useEffect(() => {
     if (!open) return
-    setForm(initialState)
+    setForm(promotion ? fromPromotion(promotion) : initialState)
     setAttachmentFile(null)
     setIsUploading(false)
-  }, [open])
+  }, [open, promotion])
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -147,10 +173,12 @@ export default function AddPromotionModal({
           </div>
           <div>
             <h2 className="text-lg font-semibold text-white">
-              Add New Promotion
+              {isEdit ? 'Edit Promotion' : 'Add New Promotion'}
             </h2>
             <p className="text-xs text-gray-400">
-              Fill in the details to publish a new promotion.
+              {isEdit
+                ? 'Update the promotion details below.'
+                : 'Fill in the details to publish a new promotion.'}
             </p>
           </div>
         </header>
@@ -267,8 +295,12 @@ export default function AddPromotionModal({
             {isUploading
               ? 'Uploading image...'
               : isSubmitting
-                ? 'Creating...'
-                : 'Create New Promotion'}
+                ? isEdit
+                  ? 'Updating...'
+                  : 'Creating...'
+                : isEdit
+                  ? 'Update Promotion'
+                  : 'Create New Promotion'}
           </button>
         </footer>
       </form>
