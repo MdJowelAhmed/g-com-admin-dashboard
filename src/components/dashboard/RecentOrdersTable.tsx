@@ -4,15 +4,14 @@ import type { ColumnsType } from 'antd/es/table'
 import { CheckCircle2, Eye } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import OrderDetailsModal from './OrderDetailsModal'
-import type { Order, OrderStatus } from '../../data/orderData'
+import type { OrderStatus } from '../../data/orderData'
 
-// OrderStatus and Order types are imported from 'src/data/orderData'
-// — the canonical single source of truth for all order-related types.
+export type { OrderStatus }
 
 // NOTE: This local Order shape differs from OrderRecord in data/orderData.ts
 // because RecentOrdersTable uses image/title fields for display purposes.
 // When the backend is ready, map the API response to this shape in a data layer.
-type Order = {
+export type Order = {
   key: string
   sl: string
   image: string
@@ -130,6 +129,8 @@ const sampleOrders: Order[] = [
 ]
 
 const statusStyles: Record<OrderStatus, string> = {
+  Paid: 'bg-blue-500 text-white',
+  Delivered: 'bg-emerald-600 text-white',
   Completed: 'bg-emerald-500 text-white',
   Pending: 'bg-amber-500 text-white',
   Cancelled: 'bg-red-500 text-white',

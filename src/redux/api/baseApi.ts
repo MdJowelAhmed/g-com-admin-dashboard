@@ -15,8 +15,6 @@ export const baseApi = createApi({
             if (token) {
                 headers.set('authorization', `Bearer ${token}`)
             }
-            // Don't set Content-Type for FormData - browser will set it with boundary
-            // RTK Query will handle this automatically
             return headers
         },
     }),
@@ -24,30 +22,11 @@ export const baseApi = createApi({
   'Auth',
   'Category',
   'Chats',
-  'Materials',
-  'Equipment',
-  'Vehicles',
-  'Estimate',
-  'Invoice',
-  'Projects',
-  'Teams',
-  'Employees',
-  'Attendance',
-  'PayrollManagement',
-  'ResourceRequestsReport',
-  'RequestedMaterials',
-  'RequestedEquipments',
-  'RequestedVehicles',
-  'ChangeOrders',
-  'VehicleMaintenance',
-  'EquipmentMaintenance',
-  'Review',
-  'Reviews',
+
   'DailySafetyReports',
   'Customers',
   'Payment',
   'Notification',
-  'CompanyProjects',
   'Promotions',
   'Users',
   'Controllers',

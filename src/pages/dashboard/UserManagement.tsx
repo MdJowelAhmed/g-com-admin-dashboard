@@ -42,7 +42,7 @@ export default function UserManagement() {
   const [viewing, setViewing] = useState<User | null>(null)
   const [editing, setEditing] = useState<User | null>(null)
 
-  const { data, isLoading, isError } = useGetUsersQuery()
+  const { data, isLoading, isError } = useGetUsersQuery(undefined)
   const [updateUserStatus] = useUpdateUserStatusMutation()
 
   const users = useMemo(

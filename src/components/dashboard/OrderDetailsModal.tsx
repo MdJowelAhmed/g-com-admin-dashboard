@@ -3,6 +3,8 @@ import { CheckCircle2 } from 'lucide-react'
 import type { Order, OrderStatus } from './RecentOrdersTable'
 
 const statusStyles: Record<OrderStatus, string> = {
+  Paid: 'bg-blue-500 text-white',
+  Delivered: 'bg-emerald-600 text-white',
   Completed: 'bg-emerald-500 text-white',
   Pending: 'bg-amber-500 text-white',
   Cancelled: 'bg-red-500 text-white',

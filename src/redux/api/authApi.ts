@@ -137,7 +137,7 @@ const authApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ['Auth'],
         }),
-        logout: builder.mutation({
+        logout: builder.mutation<LoginResponse, void>({
             query: () => ({
                 url: '/auth/logout',
                 method: 'POST',
