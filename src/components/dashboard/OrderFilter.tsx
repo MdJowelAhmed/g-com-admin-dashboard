@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { Popover } from 'antd'
 import { ChevronDown, Filter } from 'lucide-react'
-import { ORDER_STATUSES, type OrderStatus } from './orderData'
+import {
+  API_ORDER_STATUSES,
+  formatStatusLabel,
+  type ApiOrderStatus,
+} from '../../redux/api/orderManageApi'
 
 export type OrderFilterState = {
-  statuses: OrderStatus[]
+  statuses: ApiOrderStatus[]
   minAmount: string
   maxAmount: string
 }
@@ -29,7 +33,7 @@ export default function OrderFilter({ value, onChange }: Props) {
     (value.minAmount ? 1 : 0) +
     (value.maxAmount ? 1 : 0)
 
-  const toggleStatus = (status: OrderStatus) =>
+  const toggleStatus = (status: ApiOrderStatus) =>
     setDraft((prev) => ({
       ...prev,
       statuses: prev.statuses.includes(status)
@@ -66,10 +70,10 @@ export default function OrderFilter({ value, onChange }: Props) {
               Status
             </div>
             <div className="space-y-1">
-              {ORDER_STATUSES.map((status) => (
+              {API_ORDER_STATUSES.map((status) => (
                 <CheckboxPill
                   key={status}
-                  label={status}
+                  label={formatStatusLabel(status)}
                   checked={draft.statuses.includes(status)}
                   onChange={() => toggleStatus(status)}
                 />
@@ -79,7 +83,7 @@ export default function OrderFilter({ value, onChange }: Props) {
 
           <div className="border-t border-surface-border pt-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Amount range ($)
+              Amount range (₵)
             </div>
             <div className="flex items-center gap-2">
               <input

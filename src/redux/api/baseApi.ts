@@ -32,6 +32,7 @@ export const baseApi = createApi({
   'Controllers',
   'Events',
   'Shops',
+  'Orders',
   'SubCategory',
   'Setting',
 ],
