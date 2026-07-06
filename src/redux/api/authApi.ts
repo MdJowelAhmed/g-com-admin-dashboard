@@ -33,21 +33,80 @@ interface ChangePasswordResponse {
     message: string;
 }
 
+interface ForgotPasswordPayload {
+    email: string;
+}
+
+interface ForgotPasswordResponse {
+    success: boolean;
+    message: string;
+}
+
+interface ResendOtpPayload {
+    email: string;
+}
+
+interface ResendOtpResponse {
+    success: boolean;
+    message: string;
+}
+
 interface VerifyEmailPayload {
     email: string;
     oneTimeCode: number;
+    purpose?: 'forgot' | 'register';
 }
 
 interface VerifyEmailResponse {
     success: boolean;
     message: string;
-    // Backend returns the reset token in the "data" field
-    data: string;
+    data: unknown;
+}
+
+export const RESET_PASSWORD_TOKEN_KEY = 'resetPasswordToken';
+
+export function extractResetTokenFromVerifyResponse(
+    response: Pick<VerifyEmailResponse, 'data'> | undefined,
+): string | null {
+    if (response?.data == null) return null;
+
+    let value: unknown = response.data;
+
+    for (let depth = 0; depth < 3; depth++) {
+        if (typeof value === 'string' && value.trim()) {
+            return value.trim();
+        }
+
+        if (typeof value === 'object' && value !== null) {
+            const obj = value as Record<string, unknown>;
+            const nested =
+                obj.data ?? obj.token ?? obj.accessToken ?? obj.resetToken;
+
+            if (nested !== undefined) {
+                value = nested;
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    return null;
+}
+
+export function persistResetPasswordToken(
+    response: Pick<VerifyEmailResponse, 'data'> | undefined,
+): void {
+    const token = extractResetTokenFromVerifyResponse(response);
+    if (!token || typeof localStorage === 'undefined') return;
+
+    localStorage.setItem(RESET_PASSWORD_TOKEN_KEY, token);
 }
 
 interface ResetPasswordPayload {
+    email: string;
     newPassword: string;
-    confirmNewPassword: string;
+    confirmPassword: string;
 }
 
 interface ResetPasswordResponse {
@@ -169,7 +228,7 @@ const authApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ['Auth'],
         }),
-        forgotPassword: builder.mutation({
+        forgotPassword: builder.mutation<ForgotPasswordResponse, ForgotPasswordPayload>({
             query: (credentials) => ({
                 url: '/auth/forget-password',
                 method: 'POST',
@@ -177,7 +236,7 @@ const authApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ['Auth'],
         }),
-        resentOtp: builder.mutation({
+        resentOtp: builder.mutation<ResendOtpResponse, ResendOtpPayload>({
             query: (credentials) => ({
                 url: '/auth/resend-otp',
                 method: 'POST',
@@ -191,52 +250,56 @@ const authApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body: credentials,
             }),
-            async onQueryStarted(_arg, { queryFulfilled }) {
+            async onQueryStarted(arg, { queryFulfilled }) {
                 try {
-                    const { data } = await queryFulfilled;
-                    // Safely store the reset token from response.data into localStorage
-                    if (data?.data) {
-                        try {
-                            if (typeof localStorage !== 'undefined') {
-                                localStorage.setItem('resetPasswordToken', data.data);
-                            }
-                        } catch {
-                            // ignore storage errors
-                        }
-                    }
+                    const { data: response } = await queryFulfilled;
+                    if (arg.purpose !== 'forgot') return;
+
+                    persistResetPasswordToken(response);
                 } catch {
-                    // ignore errors; normal RTK Query error handling will apply
+                    // RTK Query handles mutation errors
                 }
             },
             invalidatesTags: ['Auth'],
         }),
         resetPassword: builder.mutation<ResetPasswordResponse, ResetPasswordPayload>({
             query: (credentials) => {
-                // Read the reset token that was returned from verify-email
-                let resetToken: string | null = null;
+                let resetToken: string | null = null
                 try {
-                    resetToken = typeof localStorage !== 'undefined'
-                        ? localStorage.getItem('resetPasswordToken')
-                        : null;
+                    resetToken =
+                        typeof localStorage !== 'undefined'
+                            ? localStorage.getItem(RESET_PASSWORD_TOKEN_KEY)
+                            : null
                 } catch {
-                    resetToken = null;
-                }
-
-                const headers: Record<string, string> = {};
-                if (resetToken) {
-                    // Backend expects this token in the Authorization header
-                    headers.Authorization = resetToken;
+                    resetToken = null
                 }
 
                 return {
                     url: '/auth/reset-password',
                     method: 'POST',
-                    body: credentials,
-                    headers,
-                };
+                    body: {
+                        email: credentials.email,
+                        newPassword: credentials.newPassword,
+                        confirmPassword: credentials.confirmPassword,
+                    },
+                    ...(resetToken
+                        ? { headers: { authorization: resetToken } }
+                        : {}),
+                }
+            },
+            async onQueryStarted(_arg, { queryFulfilled }) {
+                try {
+                    await queryFulfilled;
+                    if (typeof localStorage !== 'undefined') {
+                        localStorage.removeItem(RESET_PASSWORD_TOKEN_KEY);
+                    }
+                } catch {
+                    // RTK Query handles mutation errors
+                }
             },
             invalidatesTags: ['Auth'],
         }),
+
 
         getMyProfile: builder.query<GetMyProfileResponse, void>({
             query: () => ({

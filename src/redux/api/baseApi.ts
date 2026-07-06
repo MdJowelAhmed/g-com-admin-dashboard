@@ -5,7 +5,11 @@ export const baseApi = createApi({
     reducerPath: 'baseApi',
     baseQuery: fetchBaseQuery({
         baseUrl: import.meta.env.VITE_API_BASE_URL + '/api/v1',
-        prepareHeaders: (headers, { getState }) => {
+        prepareHeaders: (headers, { getState, endpoint }) => {
+            if (endpoint === 'resetPassword') {
+                return headers
+            }
+
             const stateToken = (getState() as RootState).auth.token
             const token =
                 stateToken ??

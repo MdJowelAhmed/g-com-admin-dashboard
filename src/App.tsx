@@ -31,6 +31,7 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/check-email" element={<CheckEmail />} />
       <Route path="/otp" element={<OtpVerification />} />
+      <Route path="/verify-email" element={<Navigate to="/otp" replace />} />
       <Route path="/reset-password" element={<SetNewPassword />} />
       <Route path="/password-reset-success" element={<PasswordResetSuccess />} />
 
