@@ -16,7 +16,7 @@ const statusStyles: Record<string, string> = {
   delivered: 'text-emerald-400',
   completed: 'text-emerald-400',
   cancelled: 'text-red-400',
-  dispute: 'text-orange-400',
+  disputed: 'text-gray-400',
 }
 
 const paymentStatusStyles: Record<string, string> = {
@@ -112,7 +112,7 @@ export default function OrdersTable({
           >
             <Eye size={16} />
           </IconAction>
-          {record.status === 'dispute' && (
+          {record.status === 'disputed' && (
             <IconAction
               label={`Resolve dispute for ${record.orderId}`}
               onClick={() => onResolveDispute(record)}

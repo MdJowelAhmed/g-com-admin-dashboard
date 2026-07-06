@@ -1,6 +1,20 @@
 import { Modal } from 'antd'
 import { CheckCircle2 } from 'lucide-react'
-import type { Order, OrderStatus } from './RecentOrdersTable'
+import type { OrderStatus } from '../../data/orderData'
+
+type Order = {
+  key: string
+  sl: string
+  image: string
+  title: string
+  orderNumber: string
+  date: string
+  time: string
+  customer: string
+  items: number
+  amount: number
+  status: OrderStatus
+}
 
 const statusStyles: Record<OrderStatus, string> = {
   Paid: 'bg-blue-500 text-white',

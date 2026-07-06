@@ -4,7 +4,7 @@ export type ApiOrderStatus =
   | 'pending'
   | 'delivered'
   | 'cancelled'
-  | 'dispute'
+  | 'disputed'
   | 'processing'
   | 'confirmed'
   | 'completed'
@@ -200,7 +200,7 @@ export const API_ORDER_STATUSES: ApiOrderStatus[] = [
   'delivered',
   'completed',
   'cancelled',
-  'dispute',
+  'disputed',
 ]
 
 function formatStatusLabel(status: string) {
@@ -247,7 +247,7 @@ const orderManageApi = baseApi.injectEndpoints({
     }),
     resolveDispute: builder.mutation<OrderResponse, ResolveDisputePayload>({
       query: ({ id, resolution }) => ({
-        url: `/admin-dashboard/orders/${id}/resolve-dispute`,
+        url: `/orders/${id}/resolve-dispute`,
         method: 'PATCH',
         body: { resolution },
       }),

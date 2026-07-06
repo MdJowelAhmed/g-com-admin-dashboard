@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Select } from 'antd'
+import { useMemo, useState } from 'react'
+import { Select, Spin } from 'antd'
 import { ListFilter } from 'lucide-react'
 import {
   CartesianGrid,
@@ -10,35 +10,46 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import {
+  mapMonthlyRevenueToChart,
+  useGetOverviewYearlyRevenueQuery,
+} from '../../redux/api/overviewApi'
 
-type Point = { month: string; value: number }
-
-const data: Point[] = [
-  { month: 'Jan', value: 14200 },
-  { month: 'Feb', value: 15600 },
-  { month: 'Mar', value: 17300 },
-  { month: 'Apr', value: 19800 },
-  { month: 'May', value: 22400 },
-  { month: 'Jun', value: 38753 },
-  { month: 'Jul', value: 29100 },
-  { month: 'Aug', value: 25600 },
-  { month: 'Sept', value: 22800 },
-  { month: 'Oct', value: 12657 },
-  { month: 'Nov', value: 20400 },
-  { month: 'Des', value: 23100 },
-]
+type RangeKey = 'last-year' | 'this-year' | 'last-6'
 
 const formatCurrency = (n: number) =>
-  `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+  `₵${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+
+const formatYAxis = (value: number) => {
+  if (value >= 1000) return `₵${value / 1000}k`
+  return `₵${value}`
+}
+
+function getYearForRange(range: RangeKey) {
+  const currentYear = new Date().getFullYear()
+  return range === 'last-year' ? currentYear - 1 : currentYear
+}
 
 export default function RevenueChart() {
-  const [range, setRange] = useState('last-year')
+  const [range, setRange] = useState<RangeKey>('this-year')
+  const year = getYearForRange(range)
+  const { data, isLoading, isFetching } = useGetOverviewYearlyRevenueQuery(year)
+
+  const chartData = useMemo(() => {
+    const points = mapMonthlyRevenueToChart(data?.data?.monthlyRevenue ?? [])
+    if (range !== 'last-6') return points
+
+    const currentMonth = new Date().getMonth()
+    return points.slice(Math.max(0, currentMonth - 5), currentMonth + 1)
+  }, [data, range])
+
+  const loading = isLoading || isFetching
 
   return (
     <div className="rounded-2xl border border-surface-border bg-surface-card p-5">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white">Revenue Overview</h2>
-        <Select
+        <Select<RangeKey>
           value={range}
           onChange={setRange}
           suffixIcon={<ListFilter size={16} />}
@@ -52,9 +63,14 @@ export default function RevenueChart() {
         />
       </div>
 
-      <div className="mt-4 h-[300px] w-full">
+      <div className="relative mt-4 h-[300px] w-full">
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface-card/60">
+            <Spin />
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 24, right: 16, left: 0, bottom: 8 }}>
+          <LineChart data={chartData} margin={{ top: 24, right: 16, left: 0, bottom: 8 }}>
             <CartesianGrid
               stroke="#2e2e34"
               strokeDasharray="3 6"
@@ -73,7 +89,7 @@ export default function RevenueChart() {
               tickLine={false}
               axisLine={false}
               tick={{ fill: '#9ca3af', fontSize: 12 }}
-              tickFormatter={(v) => `$${v / 1000}k`}
+              tickFormatter={formatYAxis}
               width={56}
             />
             <Tooltip
@@ -84,7 +100,13 @@ export default function RevenueChart() {
                 borderRadius: 8,
                 color: '#fff',
               }}
-              formatter={(v) => [formatCurrency(Number(v) || 0), 'Revenue']}
+              formatter={(value, _name, item) => {
+                const orderCount = item?.payload?.orderCount ?? 0
+                return [
+                  `${formatCurrency(Number(value) || 0)} (${orderCount} orders)`,
+                  'Revenue',
+                ]
+              }}
             />
             <Line
               type="monotone"

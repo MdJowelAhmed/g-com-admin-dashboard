@@ -38,7 +38,7 @@ const navItems: NavItem[] = [
     icon: UserCog,
   },
   { label: 'Messages', to: '/dashboard/messages', icon: Mail },
-  { label: 'Broadcast', to: '/dashboard/broadcast', icon: Megaphone },
+  // { label: 'Broadcast', to: '/dashboard/broadcast', icon: Megaphone },
   { label: 'Settings', to: '/dashboard/settings', icon: Settings },
 ]
 

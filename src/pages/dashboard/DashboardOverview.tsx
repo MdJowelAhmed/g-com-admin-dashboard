@@ -3,19 +3,41 @@ import StatCard from '../../components/dashboard/StatCard'
 import RevenueChart from '../../components/dashboard/RevenueChart'
 import VerificationQueue from '../../components/dashboard/VerificationQueue'
 import RecentOrdersTable from '../../components/dashboard/RecentOrdersTable'
-
-const stats = [
-  { label: 'Total Orders', value: '12,450', icon: Package },
-  { label: 'Total Business', value: '$4,367', icon: Store },
-  { label: 'Total User', value: '540', icon: Users },
-  { label: 'Total Revenue', value: '$5,400', icon: TrendingUp },
-]
+import { useGetOverviewStatsQuery } from '../../redux/api/overviewApi'
 
 export default function DashboardOverview() {
+  const { data, isLoading } = useGetOverviewStatsQuery()
+  const stats = data?.data
+
+  const statCards = [
+    {
+      label: 'Total Orders',
+      value: stats ? stats.totalOrders.toLocaleString() : '—',
+      icon: Package,
+    },
+    {
+      label: 'Total Business',
+      value: stats ? stats.totalBusinesses.toLocaleString() : '—',
+      icon: Store,
+    },
+    {
+      label: 'Total User',
+      value: stats ? stats.totalUsers.toLocaleString() : '—',
+      icon: Users,
+    },
+    {
+      label: 'Total Revenue',
+      value: stats ? `₵${stats.totalRevenue.toLocaleString()}` : '—',
+      icon: TrendingUp,
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-6">
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
+      <section
+        className={`grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4${isLoading ? ' opacity-70' : ''}`}
+      >
+        {statCards.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
       </section>
