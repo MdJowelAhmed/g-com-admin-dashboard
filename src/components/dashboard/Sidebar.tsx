@@ -6,7 +6,6 @@ import {
   LayoutGrid,
   LogOut,
   Mail,
-  Megaphone,
   Package,
   Settings,
   Store,
