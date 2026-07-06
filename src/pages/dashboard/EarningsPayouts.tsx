@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { DollarSign, Search, ShieldCheck, Zap } from 'lucide-react'
+import { Clock, DollarSign, Search, Wallet } from 'lucide-react'
 import StatCard from '../../components/dashboard/StatCard'
 import PayoutsTable from '../../components/dashboard/PayoutsTable'
 import PayoutFilter, {
@@ -7,70 +7,95 @@ import PayoutFilter, {
   type PayoutFilterState,
 } from '../../components/dashboard/PayoutFilter'
 import {
-  feeFor,
-  initialTransactions,
-  type Transaction,
-} from '../../data/payoutData'
+  mapPayoutFromApi,
+  useGetPayoutHistoryQuery,
+} from '../../redux/api/earningPayoutApi'
 
-const formatUsd = (n: number) =>
-  `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+const PAGE_SIZE = 10
+
+function filterPayouts(
+  payouts: ReturnType<typeof mapPayoutFromApi>[],
+  query: string,
+  activeFilter: PayoutFilterState,
+) {
+  const q = query.trim().toLowerCase()
+
+  return payouts.filter((payout) => {
+    if (q) {
+      const haystack =
+        `${payout.clientReference} ${payout.businessName} ${payout.method}`.toLowerCase()
+      if (!haystack.includes(q)) return false
+    }
+    if (
+      activeFilter.statuses.length &&
+      !activeFilter.statuses.includes(payout.status)
+    ) {
+      return false
+    }
+    if (
+      activeFilter.methods.length &&
+      !activeFilter.methods.includes(payout.method)
+    ) {
+      return false
+    }
+    return true
+  })
+}
 
 export default function EarningsPayouts() {
-  const [transactions, setTransactions] =
-    useState<Transaction[]>(initialTransactions)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<PayoutFilterState>(EMPTY_PAYOUT_FILTER)
+  const [page, setPage] = useState(1)
+
+  const { data, isLoading, isFetching } = useGetPayoutHistoryQuery({
+    page,
+    limit: PAGE_SIZE,
+  })
+
+  const payouts = useMemo(
+    () => (data?.data ?? []).map((doc, index) => mapPayoutFromApi(doc, index)),
+    [data],
+  )
+
+  const filtered = useMemo(
+    () => filterPayouts(payouts, query, filter),
+    [payouts, query, filter],
+  )
 
   const totals = useMemo(() => {
-    let escrow = 0
-    let direct = 0
-    let fees = 0
-    for (const t of transactions) {
-      if (t.category === 'Escrow') escrow += t.grossAmount
-      else direct += t.grossAmount
-      fees += feeFor(t.grossAmount)
+    const totalAmount = payouts.reduce((sum, payout) => sum + payout.amount, 0)
+    const processingCount = payouts.filter(
+      (payout) => payout.status === 'processing',
+    ).length
+
+    return {
+      totalAmount,
+      processingCount,
+      totalRequests: data?.pagination.total ?? 0,
     }
-    return { escrow, direct, fees }
-  }, [transactions])
+  }, [payouts, data])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return transactions.filter((t) => {
-      if (q) {
-        const haystack = `${t.transactionId} ${t.name}`.toLowerCase()
-        if (!haystack.includes(q)) return false
-      }
-      if (filter.statuses.length && !filter.statuses.includes(t.status)) {
-        return false
-      }
-      if (filter.systems.length && !filter.systems.includes(t.system)) {
-        return false
-      }
-      return true
-    })
-  }, [transactions, query, filter])
-
-  const release = (key: string) =>
-    setTransactions((prev) =>
-      prev.map((t) => (t.key === key ? { ...t, status: 'Released' } : t)),
-    )
+  const pagination = data?.pagination
+  const loading = isLoading || isFetching
 
   return (
     <div className="py-6">
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section
+        className={`grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3${loading ? ' opacity-70' : ''}`}
+      >
         <StatCard
-          label="Secure Pay (Escrow)"
-          value={formatUsd(totals.escrow)}
-          icon={ShieldCheck}
+          label="Total Payout Requests"
+          value={totals.totalRequests.toLocaleString()}
+          icon={Wallet}
         />
         <StatCard
-          label="Instant Pay (Direct)"
-          value={formatUsd(totals.direct)}
-          icon={Zap}
+          label="Processing"
+          value={totals.processingCount.toLocaleString()}
+          icon={Clock}
         />
         <StatCard
-          label="Collected Fees"
-          value={formatUsd(totals.fees)}
+          label="Page Payout Amount"
+          value={`₵${totals.totalAmount.toLocaleString()}`}
           icon={DollarSign}
         />
       </section>
@@ -91,7 +116,7 @@ export default function EarningsPayouts() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search TXN ID.."
+                placeholder="Search reference or business..."
                 className="h-10 w-full rounded-md border border-surface-border bg-transparent pl-9 pr-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-brand"
               />
             </div>
@@ -100,7 +125,18 @@ export default function EarningsPayouts() {
         </header>
 
         <div className="mt-6">
-          <PayoutsTable data={filtered} onRelease={release} />
+          <PayoutsTable
+            data={filtered}
+            loading={loading}
+            pagination={{
+              current: pagination?.page ?? page,
+              pageSize: pagination?.limit ?? PAGE_SIZE,
+              total: pagination?.total ?? 0,
+              showSizeChanger: false,
+              hideOnSinglePage: false,
+              onChange: (nextPage) => setPage(nextPage),
+            }}
+          />
         </div>
       </section>
     </div>

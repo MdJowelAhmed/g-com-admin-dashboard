@@ -1,83 +1,73 @@
-import { Popconfirm, Table } from 'antd'
-import type { ColumnsType } from 'antd/es/table'
-import { feeFor, type Transaction } from './payoutData'
+import { Table } from 'antd'
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import {
+  formatPayoutStatus,
+  type PayoutListItem,
+} from '../../redux/api/earningPayoutApi'
+
+const statusStyles: Record<string, string> = {
+  pending: 'bg-amber-500 text-white',
+  processing: 'bg-sky-500 text-white',
+  completed: 'bg-emerald-500 text-white',
+  failed: 'bg-red-500 text-white',
+  cancelled: 'bg-gray-600 text-white',
+}
 
 type Props = {
-  data: Transaction[]
-  pageSize?: number
-  onRelease: (key: string) => void
+  data: PayoutListItem[]
+  loading?: boolean
+  pagination?: TablePaginationConfig
 }
 
 export default function PayoutsTable({
   data,
-  pageSize = 8,
-  onRelease,
+  loading = false,
+  pagination,
 }: Props) {
-  const columns: ColumnsType<Transaction> = [
+  const columns: ColumnsType<PayoutListItem> = [
     { title: 'SL', dataIndex: 'sl', key: 'sl', width: 72 },
     {
-      title: 'Transaction ID',
-      dataIndex: 'transactionId',
-      key: 'transactionId',
-      render: (v: string) => (
-        <span className="font-medium text-white">{v}</span>
+      title: 'Reference',
+      dataIndex: 'clientReference',
+      key: 'clientReference',
+      render: (value: string) => (
+        <span className="font-medium text-white">{value}</span>
       ),
     },
-    { title: 'Name', dataIndex: 'name', key: 'name' },
-    { title: 'System', dataIndex: 'system', key: 'system' },
+    { title: 'Business', dataIndex: 'businessName', key: 'businessName' },
+    { title: 'Method', dataIndex: 'method', key: 'method' },
     {
-      title: 'Gross Amount',
-      dataIndex: 'grossAmount',
-      key: 'grossAmount',
-      render: (v: number) =>
-        `$${v.toLocaleString('en-US', { minimumFractionDigits: 0 })}`,
+      title: 'Amount',
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (value: number) => `₵${value.toLocaleString()}`,
     },
     {
-      title: 'Fee (3%)',
-      key: 'fee',
-      render: (_, record) => {
-        const fee = feeFor(record.grossAmount)
-        return `$${fee.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
-      },
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => (
+        <span
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusStyles[status] ?? 'bg-gray-600 text-white'}`}
+        >
+          {formatPayoutStatus(status)}
+        </span>
+      ),
     },
     {
-      title: 'Actions',
-      key: 'actions',
-      width: 170,
-      render: (_, record) =>
-        record.status === 'Released' ? (
-          <span className="inline-flex h-9 items-center justify-center rounded-md bg-emerald-500 px-4 text-xs font-semibold text-white">
-            Released
-          </span>
-        ) : (
-          <Popconfirm
-            title="Release payout"
-            description={`Release $${record.grossAmount.toLocaleString()} to ${record.name}?`}
-            okText="Release"
-            cancelText="Cancel"
-            onConfirm={() => onRelease(record.key)}
-          >
-            <button
-              type="button"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-emerald-500 px-4 text-xs font-semibold text-emerald-400 transition-colors hover:bg-emerald-500/10"
-            >
-              Release Amount
-            </button>
-          </Popconfirm>
-        ),
+      title: 'Date',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
     },
   ]
 
   return (
-    <Table<Transaction>
+    <Table<PayoutListItem>
       columns={columns}
       dataSource={data}
+      loading={loading}
       className="dashboard-table"
-      pagination={{
-        pageSize,
-        showSizeChanger: false,
-        hideOnSinglePage: false,
-      }}
+      pagination={pagination}
     />
   )
 }

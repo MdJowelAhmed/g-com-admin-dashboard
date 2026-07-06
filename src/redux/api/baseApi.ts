@@ -34,6 +34,7 @@ export const baseApi = createApi({
   'Shops',
   'Orders',
   'Overview',
+  'PayoutHistory',
   'SubCategory',
   'Setting',
 ],

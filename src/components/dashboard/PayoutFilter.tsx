@@ -2,21 +2,13 @@ import { useState } from 'react'
 import { Popover } from 'antd'
 import { ChevronDown, Filter } from 'lucide-react'
 import {
-  PAYMENT_SYSTEMS,
-  PAYOUT_STATUSES,
-  type PaymentSystem,
-  type PayoutStatus,
+  API_PAYOUT_STATUSES,
+  PAYOUT_METHODS,
+} from '../../redux/api/earningPayoutApi'
+import {
+  EMPTY_PAYOUT_FILTER,
+  type PayoutFilterState,
 } from './payoutData'
-
-export type PayoutFilterState = {
-  statuses: PayoutStatus[]
-  systems: PaymentSystem[]
-}
-
-export const EMPTY_PAYOUT_FILTER: PayoutFilterState = {
-  statuses: [],
-  systems: [],
-}
 
 type Props = {
   value: PayoutFilterState
@@ -27,22 +19,22 @@ export default function PayoutFilter({ value, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<PayoutFilterState>(value)
 
-  const activeCount = value.statuses.length + value.systems.length
+  const activeCount = value.statuses.length + value.methods.length
 
-  const toggleStatus = (status: PayoutStatus) =>
+  const toggleStatus = (status: string) =>
     setDraft((prev) => ({
       ...prev,
       statuses: prev.statuses.includes(status)
-        ? prev.statuses.filter((s) => s !== status)
+        ? prev.statuses.filter((item) => item !== status)
         : [...prev.statuses, status],
     }))
 
-  const toggleSystem = (system: PaymentSystem) =>
+  const toggleMethod = (method: string) =>
     setDraft((prev) => ({
       ...prev,
-      systems: prev.systems.includes(system)
-        ? prev.systems.filter((s) => s !== system)
-        : [...prev.systems, system],
+      methods: prev.methods.includes(method)
+        ? prev.methods.filter((item) => item !== method)
+        : [...prev.methods, method],
     }))
 
   const apply = () => {
@@ -70,23 +62,23 @@ export default function PayoutFilter({ value, onChange }: Props) {
       content={
         <div className="w-64 space-y-4 p-1">
           <FilterGroup label="Status">
-            {PAYOUT_STATUSES.map((status) => (
+            {API_PAYOUT_STATUSES.map((status) => (
               <CheckboxPill
                 key={status}
-                label={status}
+                label={status.charAt(0).toUpperCase() + status.slice(1)}
                 checked={draft.statuses.includes(status)}
                 onChange={() => toggleStatus(status)}
               />
             ))}
           </FilterGroup>
 
-          <FilterGroup label="Payment System">
-            {PAYMENT_SYSTEMS.map((system) => (
+          <FilterGroup label="Payment Method">
+            {PAYOUT_METHODS.map((method) => (
               <CheckboxPill
-                key={system}
-                label={system}
-                checked={draft.systems.includes(system)}
-                onChange={() => toggleSystem(system)}
+                key={method}
+                label={method}
+                checked={draft.methods.includes(method)}
+                onChange={() => toggleMethod(method)}
               />
             ))}
           </FilterGroup>
@@ -181,3 +173,6 @@ function CheckboxPill({ label, checked, onChange }: CheckboxPillProps) {
     </button>
   )
 }
+
+export type { PayoutFilterState }
+export { EMPTY_PAYOUT_FILTER }
