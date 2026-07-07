@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import {
   FileText,
-  HelpCircle,
-  Info,
+  // HelpCircle,
+  // Info,
   KeyRound,
   ShieldCheck,
   User,
@@ -10,8 +10,8 @@ import {
 } from 'lucide-react'
 import ProfileTab from '../../components/dashboard/settings/ProfileTab'
 import ChangePasswordTab from '../../components/dashboard/settings/ChangePasswordTab'
-import FaqTab from '../../components/dashboard/settings/FaqTab'
-import RichTextTab from '../../components/dashboard/settings/RichTextTab'
+// import FaqTab from '../../components/dashboard/settings/FaqTab'
+// import RichTextTab from '../../components/dashboard/settings/RichTextTab'
 import DualRichTextTab from '../../components/dashboard/settings/DualRichTextTab'
 
 type TabId = 'profile' | 'password' | 'faq' | 'about' | 'terms' | 'privacy'
@@ -36,18 +36,18 @@ const tabs: Tab[] = [
     icon: KeyRound,
     description: 'Update your account password',
   },
-  {
-    id: 'faq',
-    label: 'FAQ',
-    icon: HelpCircle,
-    description: 'Frequently asked questions',
-  },
-  {
-    id: 'about',
-    label: 'About Us',
-    icon: Info,
-    description: 'Company description shown in-app',
-  },
+  // {
+  //   id: 'faq',
+  //   label: 'FAQ',
+  //   icon: HelpCircle,
+  //   description: 'Frequently asked questions',
+  // },
+  // {
+  //   id: 'about',
+  //   label: 'About Us',
+  //   icon: Info,
+  //   description: 'Company description shown in-app',
+  // },
   {
     id: 'terms',
     label: 'Terms and Conditions',
@@ -62,7 +62,7 @@ const tabs: Tab[] = [
   },
 ]
 
-const aboutInitial = `<h2>About G-com</h2><p>G-com connects shops, organizers, and customers on a single commerce platform. Our admin dashboard gives teams end-to-end control over listings, events, payouts, and customer support.</p><p>Replace this text with your own company description — it's shown to users inside the app.</p>`
+// const aboutInitial = `<h2>About G-com</h2><p>G-com connects shops, organizers, and customers on a single commerce platform. Our admin dashboard gives teams end-to-end control over listings, events, payouts, and customer support.</p><p>Replace this text with your own company description — it's shown to users inside the app.</p>`
 
 const termsAudienceTypes = {
   user: 'customer-terms-and-conditions',
@@ -124,14 +124,14 @@ export default function Settings() {
         <section className="rounded-2xl border border-surface-border bg-surface-card p-6">
           {activeId === 'profile' && <ProfileTab />}
           {activeId === 'password' && <ChangePasswordTab />}
-          {activeId === 'faq' && <FaqTab />}
-          {activeId === 'about' && (
+          {/* {activeId === 'faq' && <FaqTab />} */}
+          {/* {activeId === 'about' && (
             <RichTextTab
               title="About Us"
               description="Shown on the app's About page."
               initialContent={aboutInitial}
             />
-          )}
+          )} */}
           {activeId === 'terms' && (
             <DualRichTextTab
               title="Terms and Conditions"
