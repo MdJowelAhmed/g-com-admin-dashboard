@@ -1,6 +1,6 @@
-import { Popconfirm, Switch, Table } from 'antd'
+import {  Switch, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { Eye, Pencil, Trash2 } from 'lucide-react'
+import { Eye,  } from 'lucide-react'
 import type { User, UserStatus } from './userData'
 
 const statusStyles: Record<UserStatus, string> = {
@@ -22,9 +22,9 @@ type Props = {
 export default function UsersTable({
   data,
   pageSize = 8,
-  onEdit,
+  // onEdit,
   onView,
-  onDelete,
+  // onDelete,
   onToggleActive,
 }: Props) {
   const columns: ColumnsType<User> = [
@@ -61,13 +61,13 @@ export default function UsersTable({
       width: 200,
       render: (_, record) => (
         <div className="flex items-center gap-2">
-          <IconAction
+          {/* <IconAction
             label={`Edit ${record.name}`}
             onClick={() => onEdit(record)}
             className="text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
           >
             <Pencil size={16} />
-          </IconAction>
+          </IconAction> */}
 
           <IconAction
             label={`View ${record.name}`}
@@ -77,7 +77,7 @@ export default function UsersTable({
             <Eye size={16} />
           </IconAction>
 
-          <Popconfirm
+          {/* <Popconfirm
             title="Delete user"
             description={`Permanently remove ${record.name}?`}
             okText="Delete"
@@ -92,7 +92,7 @@ export default function UsersTable({
             >
               <Trash2 size={16} />
             </button>
-          </Popconfirm>
+          </Popconfirm> */}
 
           <Switch
             size="small"
