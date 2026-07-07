@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Spin } from 'antd'
 import {
   Bell,
   CheckCheck,
@@ -8,89 +9,29 @@ import {
   UserPlus,
   type LucideIcon,
 } from 'lucide-react'
-
-type NotificationType = 'order' | 'user' | 'payment' | 'system'
-
-type NotificationSection = 'Today' | 'Yesterday' | 'Earlier this week'
-
-type Notification = {
-  id: string
-  type: NotificationType
-  title: string
-  description: string
-  createdAt: string
-  section: NotificationSection
-  read: boolean
-}
+import {
+  mapNotificationFromApi,
+  type NotificationRow,
+  type NotificationSection,
+  type NotificationUiType,
+  useGetNotificationsQuery,
+  useReadAllNotificationsMutation,
+  useReadSingleNotificationMutation,
+} from '../../redux/api/notificationApi'
 
 type Filter = 'all' | 'unread'
+
+const PAGE_SIZE = 10
 
 const SECTION_ORDER: NotificationSection[] = [
   'Today',
   'Yesterday',
   'Earlier this week',
-]
-
-const initialNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'order',
-    title: 'New order placed',
-    description: 'Rakib Hossain placed order #0245847 for Americano.',
-    createdAt: '2 minutes ago',
-    section: 'Today',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'payment',
-    title: 'Payout processed',
-    description: 'Your payout of $1,240.00 has been sent to your bank account.',
-    createdAt: '1 hour ago',
-    section: 'Today',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'user',
-    title: 'New shop registration',
-    description: 'Solaris energy submitted documents for verification.',
-    createdAt: '3 hours ago',
-    section: 'Today',
-    read: false,
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: 'Scheduled maintenance',
-    description:
-      'The dashboard will be briefly unavailable on Oct 28 from 02:00 UTC.',
-    createdAt: 'Yesterday, 18:40',
-    section: 'Yesterday',
-    read: true,
-  },
-  {
-    id: '5',
-    type: 'order',
-    title: 'Order refunded',
-    description: 'Order #0245819 has been refunded to the customer.',
-    createdAt: '2 days ago',
-    section: 'Earlier this week',
-    read: true,
-  },
-  {
-    id: '6',
-    type: 'user',
-    title: 'New user signup',
-    description: 'Tania Rahman joined the platform.',
-    createdAt: '3 days ago',
-    section: 'Earlier this week',
-    read: true,
-  },
+  'Older',
 ]
 
 const typeMeta: Record<
-  NotificationType,
+  NotificationUiType,
   { icon: LucideIcon; tone: string; label: string }
 > = {
   order: {
@@ -116,36 +57,60 @@ const typeMeta: Record<
 }
 
 export default function Notifications() {
-  const [items, setItems] = useState(initialNotifications)
   const [filter, setFilter] = useState<Filter>('all')
+  const [page, setPage] = useState(1)
 
-  const unreadCount = useMemo(
-    () => items.filter((n) => !n.read).length,
-    [items],
+  const { data, isLoading, isFetching } = useGetNotificationsQuery({
+    page,
+    limit: PAGE_SIZE,
+  })
+  const [readSingleNotification] = useReadSingleNotificationMutation()
+  const [readAllNotifications, { isLoading: markingAllRead }] =
+    useReadAllNotificationsMutation()
+
+  const items = useMemo(
+    () => (data?.data.notifications ?? []).map(mapNotificationFromApi),
+    [data],
   )
 
-  const visible = filter === 'unread' ? items.filter((n) => !n.read) : items
+  const unreadCount = data?.data.unreadCount ?? 0
+  const pagination = data?.pagination
+  const loading = isLoading || isFetching
+
+  const visible =
+    filter === 'unread' ? items.filter((notification) => !notification.read) : items
 
   const grouped = useMemo(() => {
-    const map = new Map<NotificationSection, Notification[]>()
-    for (const n of visible) {
-      const bucket = map.get(n.section) ?? []
-      bucket.push(n)
-      map.set(n.section, bucket)
+    const map = new Map<NotificationSection, NotificationRow[]>()
+    for (const notification of visible) {
+      const bucket = map.get(notification.section) ?? []
+      bucket.push(notification)
+      map.set(notification.section, bucket)
     }
+
     return SECTION_ORDER.map((section) => ({
       section,
       entries: map.get(section) ?? [],
     })).filter((group) => group.entries.length > 0)
   }, [visible])
 
-  const markAllRead = () =>
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })))
+  const markAllRead = async () => {
+    if (unreadCount === 0) return
+    try {
+      await readAllNotifications().unwrap()
+    } catch {
+      // RTK Query handles mutation errors
+    }
+  }
 
-  const markOneRead = (id: string) =>
-    setItems((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    )
+  const markOneRead = async (id: string, read: boolean) => {
+    if (read) return
+    try {
+      await readSingleNotification(id).unwrap()
+    } catch {
+      // RTK Query handles mutation errors
+    }
+  }
 
   return (
     <div className="py-6">
@@ -167,11 +132,11 @@ export default function Notifications() {
         <button
           type="button"
           onClick={markAllRead}
-          disabled={unreadCount === 0}
+          disabled={unreadCount === 0 || markingAllRead}
           className="flex items-center gap-1.5 rounded-md border border-surface-border px-3 py-2 text-sm font-medium text-gray-300 transition-colors hover:border-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           <CheckCheck size={16} />
-          Mark all as read
+          {markingAllRead ? 'Marking…' : 'Mark all as read'}
         </button>
       </header>
 
@@ -180,7 +145,7 @@ export default function Notifications() {
           active={filter === 'all'}
           onClick={() => setFilter('all')}
           label="All"
-          count={items.length}
+          count={pagination?.total ?? items.length}
         />
         <FilterTab
           active={filter === 'unread'}
@@ -190,8 +155,14 @@ export default function Notifications() {
         />
       </nav>
 
-      <div className="mt-6 space-y-8">
-        {grouped.length === 0 ? (
+      <div className="relative mt-6 space-y-8">
+        {loading && (
+          <div className="flex justify-center py-16">
+            <Spin size="large" />
+          </div>
+        )}
+
+        {!loading && grouped.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-surface-border p-16 text-center">
             <Bell
               size={36}
@@ -214,11 +185,11 @@ export default function Notifications() {
               </div>
 
               <ul className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                {entries.map((n) => (
+                {entries.map((notification) => (
                   <NotificationCard
-                    key={n.id}
-                    notification={n}
-                    onClick={() => markOneRead(n.id)}
+                    key={notification.id}
+                    notification={notification}
+                    onClick={() => markOneRead(notification.id, notification.read)}
                   />
                 ))}
               </ul>
@@ -226,6 +197,32 @@ export default function Notifications() {
           ))
         )}
       </div>
+
+      {!loading && pagination && pagination.totalPage > 1 && (
+        <div className="mt-8 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            className="rounded-md border border-surface-border px-4 py-2 text-sm text-gray-300 transition-colors hover:border-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-400">
+            Page {pagination.page} of {pagination.totalPage}
+          </span>
+          <button
+            type="button"
+            disabled={page >= pagination.totalPage}
+            onClick={() =>
+              setPage((current) => Math.min(pagination.totalPage, current + 1))
+            }
+            className="rounded-md border border-surface-border px-4 py-2 text-sm text-gray-300 transition-colors hover:border-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -261,7 +258,7 @@ function FilterTab({ label, count, active, onClick }: FilterTabProps) {
 }
 
 type NotificationCardProps = {
-  notification: Notification
+  notification: NotificationRow
   onClick: () => void
 }
 

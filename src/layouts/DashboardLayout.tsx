@@ -2,10 +2,12 @@ import { Outlet, useNavigate } from 'react-router-dom'
 import Sidebar from '../components/dashboard/Sidebar'
 import Topbar from '../components/dashboard/Topbar'
 import { useAuth } from '../context/AuthContext'
+import { useNotificationSocket } from '../hooks/useNotificationSocket'
 
 export default function DashboardLayout() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  useNotificationSocket()
 
   const handleLogout = () => {
     logout()

@@ -14,6 +14,9 @@ export default defineConfig({
     port: 5174,
     host: true,
   },
+  optimizeDeps: {
+    include: ['socket.io-client'],
+  },
   test: {
     environment: 'jsdom',
   },

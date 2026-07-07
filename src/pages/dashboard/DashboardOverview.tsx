@@ -42,9 +42,10 @@ export default function DashboardOverview() {
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_360px]">
+      {/* <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_360px]"> */}
+      <section className="">
         <RevenueChart />
-        <VerificationQueue />
+        {/* <VerificationQueue /> */}
       </section>
 
       <RecentOrdersTable />
