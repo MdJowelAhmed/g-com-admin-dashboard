@@ -27,7 +27,7 @@ export default function DashboardOverview() {
     },
     {
       label: 'Total Revenue',
-      value: stats ? `₵${stats.totalRevenue.toLocaleString()}` : '—',
+      value: stats ? `GH₵${stats.totalRevenue.toLocaleString()}` : '—',
       icon: TrendingUp,
     },
   ]

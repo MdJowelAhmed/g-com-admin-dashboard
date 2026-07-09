@@ -96,7 +96,7 @@ export default function ShopManagement() {
 
   return (
     <div className="py-6">
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total Businesses"
           value={counts.total.toLocaleString()}
@@ -117,7 +117,7 @@ export default function ShopManagement() {
           value={counts.suspended.toLocaleString()}
           icon={ShieldX}
         />
-      </section>
+      </section> */}
 
       <section className="mt-6 rounded-2xl border border-surface-border bg-surface-card p-6">
         <header className="flex flex-wrap items-center justify-between gap-4">

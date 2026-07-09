@@ -18,11 +18,11 @@ import {
 type RangeKey = 'last-year' | 'this-year' | 'last-6'
 
 const formatCurrency = (n: number) =>
-  `₵${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+  `GH₵${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
 
 const formatYAxis = (value: number) => {
-  if (value >= 1000) return `₵${value / 1000}k`
-  return `₵${value}`
+  if (value >= 1000) return `GH₵${value / 1000}k`
+  return `GH₵${value}`
 }
 
 function getYearForRange(range: RangeKey) {

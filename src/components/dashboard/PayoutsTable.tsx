@@ -40,7 +40,7 @@ export default function PayoutsTable({
       title: 'Amount',
       dataIndex: 'amount',
       key: 'amount',
-      render: (value: number) => `₵${value.toLocaleString()}`,
+      render: (value: number) => `GH₵${value.toLocaleString()}`,
     },
     {
       title: 'Status',

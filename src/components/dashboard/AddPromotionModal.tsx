@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Modal, message } from 'antd'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Modal, Select, message } from 'antd'
 import { ChevronDown, Sparkles } from 'lucide-react'
 import FormControl, { controlClass, textareaClass } from './FormControl'
 import ImageUploader from '../common/ImageUploader'
@@ -7,6 +7,11 @@ import {
   uploadImageFile,
   useGetPresignedUploadUrlMutation,
 } from '../../redux/api/imageUploadApi'
+import { useGetShopsQuery } from '../../redux/api/shopManagementApi'
+import {
+  useGetPromotionProductsQuery,
+  type PromotionBusinessCategory,
+} from '../../redux/api/homeControllerApi'
 import type {
   CreatePromotionPayload,
   PromotionApiDoc,
@@ -18,10 +23,17 @@ type PromotionTypeLabel =
   | 'Latest Promotions'
   | 'Sponsored Deals'
 
+type PromotionSourceLabel = 'External' | 'Internal'
+type PromotionCategory = PromotionBusinessCategory
+
 type FormState = {
   title: string
   description: string
   type: PromotionTypeLabel
+  sourceType: PromotionSourceLabel
+  category: PromotionCategory
+  linkedBusiness: string
+  linkedProduct: string
   startDate: string
   endDate: string
   promotionPrice: string
@@ -33,6 +45,10 @@ const initialState: FormState = {
   title: '',
   description: '',
   type: 'Billboard Carousel',
+  sourceType: 'External',
+  category: 'services',
+  linkedBusiness: '',
+  linkedProduct: '',
   startDate: '',
   endDate: '',
   promotionPrice: '',
@@ -45,6 +61,39 @@ const promotionTypes: PromotionTypeLabel[] = [
   'Latest Promotions',
   'Sponsored Deals',
 ]
+
+const promotionSources: PromotionSourceLabel[] = ['External', 'Internal']
+
+const promotionCategories: Array<{ value: PromotionCategory; label: string }> = [
+  { value: 'services', label: 'Services' },
+  { value: 'stay', label: 'Stay' },
+  { value: 'dine', label: 'Dine' },
+  { value: 'shop', label: 'Shops' },
+  { value: 'event', label: 'Events' },
+]
+
+const categoryLabelByValue = Object.fromEntries(
+  promotionCategories.map((item) => [item.value, item.label]),
+) as Record<PromotionCategory, string>
+
+function normalizeBusinessCategory(value?: string | null): PromotionCategory {
+  const normalized = (value ?? '').trim().toLowerCase()
+  if (normalized === 'shop' || normalized === 'shops') return 'shop'
+  if (normalized === 'event' || normalized === 'events') return 'event'
+  if (normalized === 'stay' || normalized === 'stays') return 'stay'
+  if (normalized === 'dine') return 'dine'
+  return 'services'
+}
+
+function getItemPrice(item: Record<string, unknown>) {
+  const priceCandidate =
+    item.price ??
+    item.ticketPrice ??
+    item.basePrice ??
+    item.roomPrice ??
+    0
+  return Number(priceCandidate || 0)
+}
 
 const promotionTypeToApi: Record<PromotionTypeLabel, PromotionApiType> = {
   'Billboard Carousel': 'bilboard_courosel',
@@ -59,10 +108,15 @@ const apiToPromotionType: Record<PromotionApiType, PromotionTypeLabel> = {
 }
 
 function fromPromotion(doc: PromotionApiDoc): FormState {
+  const sourceType: PromotionSourceLabel = doc.websiteUrl ? 'External' : 'Internal'
   return {
     title: doc.title,
     description: doc.description,
     type: apiToPromotionType[doc.type],
+    sourceType,
+    category: 'services',
+    linkedBusiness: '',
+    linkedProduct: '',
     startDate: doc.startDate.slice(0, 10),
     endDate: doc.endDate.slice(0, 10),
     promotionPrice: String(doc.promotionPrice),
@@ -72,6 +126,7 @@ function fromPromotion(doc: PromotionApiDoc): FormState {
 }
 
 export function toCreatePromotionPayload(form: FormState): CreatePromotionPayload {
+  const isExternal = form.sourceType === 'External'
   return {
     title: form.title.trim(),
     description: form.description.trim(),
@@ -80,7 +135,13 @@ export function toCreatePromotionPayload(form: FormState): CreatePromotionPayloa
     endDate: `${form.endDate}T23:59:59.000Z`,
     promotionPrice: Number(form.promotionPrice),
     attachment: form.attachment,
-    ...(form.websiteUrl.trim() ? { websiteUrl: form.websiteUrl.trim() } : {}),
+    ...(isExternal && form.websiteUrl.trim()
+      ? { websiteUrl: form.websiteUrl.trim() }
+      : {}),
+    ...(!isExternal && form.linkedBusiness
+      ? { linkedBusiness: form.linkedBusiness }
+      : {}),
+    ...(!isExternal && form.linkedProduct ? { linkedProduct: form.linkedProduct } : {}),
   }
 }
 
@@ -104,9 +165,44 @@ export default function AddPromotionModal({
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [getPresignedUrl] = useGetPresignedUploadUrlMutation()
+  const { data: shopsData } = useGetShopsQuery({ page: 1, limit: 200 })
+  const { data: productsData, isFetching: isProductsLoading } =
+    useGetPromotionProductsQuery(
+      {
+        businessId: form.linkedBusiness,
+        category: form.category,
+      },
+      { skip: form.sourceType !== 'Internal' || !form.linkedBusiness || !form.category },
+    )
 
   const isBusy = isSubmitting || isUploading
   const hasImage = Boolean(attachmentFile || form.attachment)
+  const isExternal = form.sourceType === 'External'
+
+  const businessOptions = useMemo(
+    () =>
+      (shopsData?.data ?? []).map((shop) => ({
+        value: shop._id,
+        label: shop.businessName ?? shop.user.name ?? shop._id,
+        category: normalizeBusinessCategory(shop.category),
+      })),
+    [shopsData],
+  )
+
+  const productOptions = useMemo(
+    () =>
+      (productsData?.data ?? []).map((item) => ({
+        value: String(item._id ?? ''),
+        label: String(item.name ?? 'Unnamed'),
+        price: getItemPrice(item),
+      })),
+    [productsData],
+  )
+
+  const selectedProduct = useMemo(
+    () => productOptions.find((product) => product.value === form.linkedProduct),
+    [form.linkedProduct, productOptions],
+  )
 
   useEffect(() => {
     if (!open) return
@@ -118,10 +214,32 @@ export default function AddPromotionModal({
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
+  useEffect(() => {
+    if (form.sourceType === 'External') return
+    if (!selectedProduct) return
+    update('promotionPrice', String(selectedProduct.price))
+  }, [form.sourceType, selectedProduct])
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
 
     if (!attachmentFile && !form.attachment) return
+
+    if (isExternal && !form.websiteUrl.trim()) {
+      message.error('Website link is required for external promotion.')
+      return
+    }
+
+    if (!isExternal) {
+      if (!form.linkedBusiness) {
+        message.error('Please select a business for internal promotion.')
+        return
+      }
+      if (!form.linkedProduct) {
+        message.error('Please select a product for internal promotion.')
+        return
+      }
+    }
 
     let attachment = form.attachment
 
@@ -152,6 +270,28 @@ export default function AddPromotionModal({
     setForm(initialState)
     setAttachmentFile(null)
     onClose()
+  }
+
+  const handleSourceChange = (next: PromotionSourceLabel) => {
+    setForm((prev) => ({
+      ...prev,
+      sourceType: next,
+      websiteUrl: next === 'External' ? prev.websiteUrl : '',
+      linkedBusiness: next === 'Internal' ? prev.linkedBusiness : '',
+      linkedProduct: next === 'Internal' ? prev.linkedProduct : '',
+      promotionPrice: next === 'External' ? prev.promotionPrice : '',
+    }))
+  }
+
+  const handleBusinessChange = (value: string) => {
+    const business = businessOptions.find((item) => item.value === value)
+    setForm((prev) => ({
+      ...prev,
+      linkedBusiness: value,
+      category: business?.category ?? prev.category,
+      linkedProduct: '',
+      promotionPrice: '',
+    }))
   }
 
   return (
@@ -217,7 +357,72 @@ export default function AddPromotionModal({
               />
             </FormControl>
 
-            <FormControl label="Promotion Price" required>
+            <FormControl label="Placement Type" required>
+              <SelectField
+                value={form.sourceType}
+                onChange={(v) => handleSourceChange(v as PromotionSourceLabel)}
+                options={promotionSources}
+                disabled={isBusy}
+              />
+            </FormControl>
+
+            {!isExternal && (
+              <FormControl label="Business" required>
+                <SelectField
+                  value={form.linkedBusiness}
+                  onChange={handleBusinessChange}
+                  options={businessOptions.map((item) => item.value)}
+                  labels={Object.fromEntries(
+                    businessOptions.map((item) => [item.value, item.label]),
+                  )}
+                  placeholder="Select business"
+                  disabled={isBusy || businessOptions.length === 0}
+                />
+              </FormControl>
+            )}
+
+            {!isExternal && (
+              <FormControl label="Category" required>
+                <input
+                  type="text"
+                  value={categoryLabelByValue[form.category]}
+                  className={controlClass + ' cursor-not-allowed opacity-50'}
+                  disabled
+                  
+                />
+              </FormControl>
+            )}
+
+            {!isExternal && (
+              <FormControl label="Product" required>
+                <SelectField
+                  value={form.linkedProduct}
+                  onChange={(v) => update('linkedProduct', v)}
+                  options={productOptions.map((item) => item.value)}
+                  labels={Object.fromEntries(
+                    productOptions.map((item) => [item.value, item.label]),
+                  )}
+                  placeholder={
+                    isProductsLoading ? 'Loading products...' : 'Select product'
+                  }
+                  disabled={
+                    isBusy ||
+                    isProductsLoading ||
+                    !form.linkedBusiness ||
+                    productOptions.length === 0
+                  }
+                />
+              </FormControl>
+            )}
+
+            <FormControl
+              label={
+                isExternal
+                  ? 'Promotion Price'
+                  : 'Promotion Price (Auto from selected product)'
+              }
+              required
+            >
               <input
                 type="number"
                 min={0}
@@ -225,9 +430,9 @@ export default function AddPromotionModal({
                 value={form.promotionPrice}
                 onChange={(e) => update('promotionPrice', e.target.value)}
                 placeholder="30"
-                className={controlClass}
+                className={controlClass + ` ${!isExternal ? 'cursor-not-allowed opacity-50' : ''}`}
                 required
-                disabled={isBusy}
+                disabled={isBusy || !isExternal}
               />
             </FormControl>
 
@@ -254,16 +459,19 @@ export default function AddPromotionModal({
               />
             </FormControl>
 
-            <FormControl label="Website Link">
-              <input
-                type="url"
-                value={form.websiteUrl}
-                onChange={(e) => update('websiteUrl', e.target.value)}
-                placeholder="https://www.example.com/summer-sale"
-                className={controlClass}
-                disabled={isBusy}
-              />
-            </FormControl>
+            {isExternal && (
+              <FormControl label="Website Link" required>
+                <input
+                  type="url"
+                  value={form.websiteUrl}
+                  onChange={(e) => update('websiteUrl', e.target.value)}
+                  placeholder="https://www.example.com/summer-sale"
+                  className={controlClass}
+                  disabled={isBusy}
+                  required
+                />
+              </FormControl>
+            )}
 
             <div className="lg:col-span-2">
               <ImageUploader
@@ -312,6 +520,7 @@ type SelectFieldProps = {
   value: string
   onChange: (value: string) => void
   options: string[]
+  labels?: Record<string, string>
   placeholder?: string
   disabled?: boolean
 }
@@ -320,31 +529,35 @@ function SelectField({
   value,
   onChange,
   options,
+  labels,
   placeholder,
   disabled = false,
 }: SelectFieldProps) {
+  const selectOptions = options.map((opt) => ({
+    value: opt,
+    label: labels?.[opt] ?? opt,
+  }))
+
   return (
     <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+      <Select
+        value={value || undefined}
+        onChange={onChange}
+        options={selectOptions}
+        placeholder={placeholder}
         disabled={disabled}
-        className={`${controlClass} appearance-none pr-10 disabled:cursor-not-allowed disabled:opacity-60`}
-      >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        size={18}
-        className="pointer-events-none absolute inset-y-0 right-3 my-auto text-gray-400"
+        suffixIcon={<ChevronDown size={18} className="text-gray-400" />}
+        popupMatchSelectWidth
+        className="w-full [&_.ant-select-selector]:!h-12 py-3 [&_.ant-select-selector]:!rounded-md [&_.ant-select-selector]:!border-surface-border [&_.ant-select-selector]:!bg-transparent [&_.ant-select-selector]:!px-3 [&_.ant-select-selector]:!py-1.5 [&_.ant-select-selection-item]:!text-white [&_.ant-select-selection-placeholder]:!text-gray-500"
+        styles={{
+          popup: {
+            root: {
+              backgroundColor: '#1f2128',
+              border: '1px solid #303442',
+              borderRadius: 8,
+            },
+          },
+        }}
       />
     </div>
   )
