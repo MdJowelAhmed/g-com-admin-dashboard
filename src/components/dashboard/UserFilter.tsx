@@ -20,9 +20,7 @@ export default function UserFilter({ value, onChange }: Props) {
   const [open, setOpen] = useState(false)
 
   const selectStatus = (status: UserStatus) => {
-    onChange({
-      status: value.status === status ? null : status,
-    })
+    onChange({ status })
     setOpen(false)
   }
 
@@ -44,6 +42,14 @@ export default function UserFilter({ value, onChange }: Props) {
               Status
             </div>
             <div className="space-y-1">
+              <CheckboxPill
+                label="All"
+                checked={value.status === null}
+                onChange={() => {
+                  onChange(EMPTY_USER_FILTER)
+                  setOpen(false)
+                }}
+              />
               {USER_STATUSES.map((status) => (
                 <CheckboxPill
                   key={status}

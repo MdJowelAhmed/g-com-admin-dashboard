@@ -1,8 +1,13 @@
 import type {
   Controller,
+  ControllerPermissionKey,
   PagePermission,
 } from '../../components/dashboard/controllerData'
-import { PAGE_PERMISSIONS } from '../../components/dashboard/controllerData'
+import {
+  API_TO_PERMISSION,
+  PAGE_PERMISSIONS,
+  PERMISSION_TO_API,
+} from '../../components/dashboard/controllerData'
 import { baseApi } from './baseApi'
 
 export type ControllerApiStatus = 'active' | 'inactive'
@@ -65,31 +70,7 @@ export interface DeleteControllerResponse {
   message: string
 }
 
-export type ControllerPermissionKey =
-  | 'dashboard'
-  | 'user_management'
-  | 'business_management'
-  | 'categories'
-  | 'payments'
-  | 'settings'
-  | 'support'
-  | 'promotions'
-
-export const PERMISSION_TO_API: Record<PagePermission, ControllerPermissionKey> =
-  {
-    Dashboard: 'dashboard',
-    'User Management': 'user_management',
-    'Business Management': 'business_management',
-    Categories: 'categories',
-    Payments: 'payments',
-    Settings: 'settings',
-    Support: 'support',
-    Promotions: 'promotions',
-  }
-
-export const API_TO_PERMISSION = Object.fromEntries(
-  Object.entries(PERMISSION_TO_API).map(([label, key]) => [key, label]),
-) as Record<string, PagePermission>
+export type { ControllerPermissionKey }
 
 export function permissionsToApi(
   permissions: PagePermission[],

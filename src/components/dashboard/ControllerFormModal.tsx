@@ -190,7 +190,9 @@ export default function ControllerFormModal({
                             </svg>
                           )}
                         </span>
-                        <span className="truncate">{perm}</span>
+                        <span className="truncate" title={perm}>
+                          {perm}
+                        </span>
                       </label>
                     )
                   })}

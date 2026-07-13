@@ -24,9 +24,7 @@ export default function ShopFilter({ value, onChange }: Props) {
   const [open, setOpen] = useState(false)
 
   const selectStatus = (status: ShopFilterStatus) => {
-    onChange({
-      status: value.status === status ? null : status,
-    })
+    onChange({ status })
     setOpen(false)
   }
 
@@ -44,6 +42,14 @@ export default function ShopFilter({ value, onChange }: Props) {
       content={
         <div className="w-64 space-y-4 p-1">
           <FilterGroup label="Status">
+            <CheckboxPill
+              label="All"
+              checked={value.status === null}
+              onChange={() => {
+                onChange(EMPTY_FILTER)
+                setOpen(false)
+              }}
+            />
             {FILTER_STATUSES.map((status) => (
               <CheckboxPill
                 key={status}
