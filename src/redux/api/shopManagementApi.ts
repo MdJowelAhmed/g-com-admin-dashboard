@@ -72,6 +72,16 @@ export interface ShopsListResponse {
 export interface GetShopsParams {
   page?: number
   limit?: number
+  searchTerm?: string
+  status?: string
+}
+
+/** Map UI shop status labels to API `status` query values */
+export const SHOP_STATUS_TO_API: Record<ShopStatus, string> = {
+  Pending: 'pending',
+  'In Review': 'pending',
+  Verified: 'approved',
+  Suspended: 'rejected',
 }
 
 export type ShopApprovalStatus = 'approved' | 'rejected'

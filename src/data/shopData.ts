@@ -1,5 +1,5 @@
 // Canonical location for all shop-related mock data and types.
-export type ShopStatus = 'Pending' | 'Verified' | 'In Review' | 'Suspended'
+export type ShopStatus = 'All' | 'Pending' | 'Verified' | 'In Review' | 'Suspended'
 
 export type ShopVerification = {
   id: string
@@ -40,6 +40,7 @@ export const SHOP_TYPES = [
 ] as const
 
 export const SHOP_STATUSES: ShopStatus[] = [
+  'All',
   'Pending',
   'Verified',
   'In Review',

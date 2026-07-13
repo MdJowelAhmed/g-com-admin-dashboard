@@ -1,5 +1,5 @@
 import { Popconfirm, Table } from 'antd'
-import type { ColumnsType } from 'antd/es/table'
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { Check, X } from 'lucide-react'
 import {
   canReviewShop,
@@ -16,7 +16,8 @@ const statusStyles: Record<ShopStatus, string> = {
 
 type Props = {
   data: Shop[]
-  pageSize?: number
+  loading?: boolean
+  pagination?: TablePaginationConfig
   onView: (shop: Shop) => void
   onApprove: (key: string) => void
   onReject: (key: string) => void
@@ -24,7 +25,8 @@ type Props = {
 
 export default function ShopsTable({
   data,
-  pageSize = 5,
+  loading = false,
+  pagination,
   onView,
   onApprove,
   onReject,
@@ -81,7 +83,6 @@ export default function ShopsTable({
       key: 'actions',
       width: 300,
       render: (_, record) => {
-        // Requires verification docs + pending status conditions
         const showApprovalActions = canReviewShop(record)
 
         return (
@@ -136,12 +137,9 @@ export default function ShopsTable({
     <Table<Shop>
       columns={columns}
       dataSource={data}
+      loading={loading}
       className="dashboard-table"
-      pagination={{
-        pageSize,
-        showSizeChanger: false,
-        hideOnSinglePage: false,
-      }}
+      pagination={pagination}
     />
   )
 }

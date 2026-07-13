@@ -1,10 +1,22 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { RootState } from '../store'
 
+/** Encode query params with `%20` for spaces (not `+`) so backends receive real spaces. */
+function paramsSerializer(params: Record<string, unknown>) {
+  return Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(
+      ([key, value]) =>
+        `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
+    )
+    .join('&')
+}
+
 export const baseApi = createApi({
     reducerPath: 'baseApi',
     baseQuery: fetchBaseQuery({
         baseUrl: import.meta.env.VITE_API_BASE_URL + '/api/v1',
+        paramsSerializer,
         prepareHeaders: (headers, { getState, endpoint }) => {
             if (endpoint === 'resetPassword') {
                 return headers
