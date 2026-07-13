@@ -3,6 +3,7 @@ import { Modal, message } from 'antd'
 import { CalendarPlus } from 'lucide-react'
 import FormControl, { controlClass, textareaClass } from './FormControl'
 import ImageUploader from '../common/ImageUploader'
+import LocationMapPicker from '../common/LocationMapPicker'
 import {
   uploadImageFile,
   useGetPresignedUploadUrlMutation,
@@ -334,31 +335,16 @@ export default function EventFormModal({
               />
             </FormControl>
 
-            <FormControl label="Latitude" required>
-              <input
-                type="number"
-                step="any"
-                value={form.latitude}
-                onChange={(e) => update('latitude', e.target.value)}
-                placeholder="23.7793"
-                className={controlClass}
-                required
+            <div className="lg:col-span-2">
+              <LocationMapPicker
+                latitude={form.latitude}
+                longitude={form.longitude}
                 disabled={isBusy}
+                onChange={({ latitude, longitude }) =>
+                  setForm((prev) => ({ ...prev, latitude, longitude }))
+                }
               />
-            </FormControl>
-
-            <FormControl label="Longitude" required>
-              <input
-                type="number"
-                step="any"
-                value={form.longitude}
-                onChange={(e) => update('longitude', e.target.value)}
-                placeholder="90.3989"
-                className={controlClass}
-                required
-                disabled={isBusy}
-              />
-            </FormControl>
+            </div>
 
             <div className="lg:col-span-2">
               <ImageUploader
