@@ -77,7 +77,7 @@ export interface GetShopsParams {
 }
 
 /** Map UI shop status labels to API `status` query values */
-export const SHOP_STATUS_TO_API: Record<ShopStatus, string> = {
+export const SHOP_STATUS_TO_API: Record<Exclude<ShopStatus, 'All'>, string> = {
   Pending: 'pending',
   'In Review': 'pending',
   Verified: 'approved',

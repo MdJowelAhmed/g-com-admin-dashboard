@@ -1,5 +1,5 @@
 import type { User, UserStatus } from '../../data/userData'
-import { baseApi } from './baseApi'
+import { baseApi, imageUrl } from './baseApi'
 
 export type UserApiStatus = 'active' | 'inactive'
 
@@ -11,6 +11,7 @@ export interface UserApiDoc {
   phone: string
   profileImage: string
   address: string
+  about?: string
   business: unknown | null
   customer: string
   status: UserApiStatus
@@ -40,6 +41,8 @@ export interface UsersListResponse {
 export interface GetUsersParams {
   page?: number
   limit?: number
+  searchTerm?: string
+  status?: UserApiStatus
 }
 
 export interface UpdateUserStatusPayload {
@@ -53,6 +56,11 @@ export interface UpdateUserStatusResponse {
   data?: UserApiDoc
 }
 
+export const USER_STATUS_TO_API: Record<UserStatus, UserApiStatus> = {
+  Active: 'active',
+  Inactive: 'inactive',
+}
+
 function formatJoiningDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
     day: '2-digit',
@@ -61,13 +69,15 @@ function formatJoiningDate(iso: string) {
   })
 }
 
-function mapAccountStatus(doc: UserApiDoc): UserStatus {
-  if (doc.status === 'inactive') return 'Suspended'
-  if (doc.isVerified) return 'Verified'
-  return 'Pending'
+export function resolveUserMediaUrl(path: string) {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return `${imageUrl}${path}`
 }
 
 export function mapUserFromApi(doc: UserApiDoc, index: number): User {
+  const status: UserStatus = doc.status === 'inactive' ? 'Inactive' : 'Active'
+
   return {
     key: doc._id,
     sl: String(index + 1).padStart(2, '0'),
@@ -75,9 +85,12 @@ export function mapUserFromApi(doc: UserApiDoc, index: number): User {
     email: doc.email,
     phone: doc.phone || '—',
     address: doc.address || '—',
-    totalOrders: 0,
+    about: doc.about?.trim() || '—',
+    role: doc.role,
+    profileImage: doc.profileImage ?? '',
     joiningDate: formatJoiningDate(doc.createdAt),
-    status: mapAccountStatus(doc),
+    status,
+    isVerified: doc.isVerified,
     active: doc.status === 'active',
   }
 }

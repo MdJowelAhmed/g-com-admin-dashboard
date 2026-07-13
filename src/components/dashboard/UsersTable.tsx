@@ -1,30 +1,26 @@
-import {  Switch, Table } from 'antd'
-import type { ColumnsType } from 'antd/es/table'
-import { Eye,  } from 'lucide-react'
+import { Switch, Table } from 'antd'
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import { Check, Eye, X } from 'lucide-react'
 import type { User, UserStatus } from './userData'
 
 const statusStyles: Record<UserStatus, string> = {
-  Pending: 'text-amber-400',
-  Verified: 'text-emerald-400',
-  Reviewed: 'text-sky-400',
-  Suspended: 'text-red-400',
+  Active: 'text-emerald-400',
+  Inactive: 'text-red-400',
 }
 
 type Props = {
   data: User[]
-  pageSize?: number
-  onEdit: (user: User) => void
+  loading?: boolean
+  pagination?: TablePaginationConfig
   onView: (user: User) => void
-  onDelete: (key: string) => void
   onToggleActive: (key: string, next: boolean) => void
 }
 
 export default function UsersTable({
   data,
-  pageSize = 8,
-  // onEdit,
+  loading = false,
+  pagination,
   onView,
-  // onDelete,
   onToggleActive,
 }: Props) {
   const columns: ColumnsType<User> = [
@@ -39,12 +35,29 @@ export default function UsersTable({
       ),
     },
     {
-      title: 'Total Orders',
-      dataIndex: 'totalOrders',
-      key: 'totalOrders',
-      render: (v: number) => v.toLocaleString(),
+      title: 'Phone',
+      dataIndex: 'phone',
+      key: 'phone',
     },
     { title: 'Joining Date', dataIndex: 'joiningDate', key: 'joiningDate' },
+    {
+      title: 'Verified',
+      dataIndex: 'isVerified',
+      key: 'isVerified',
+      width: 100,
+      render: (isVerified: boolean) => (
+        <span
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${
+            isVerified
+              ? 'bg-emerald-500/15 text-emerald-400'
+              : 'bg-red-500/15 text-red-400'
+          }`}
+          title={isVerified ? 'Verified' : 'Not verified'}
+        >
+          {isVerified ? <Check size={16} /> : <X size={16} />}
+        </span>
+      ),
+    },
     {
       title: 'Status',
       dataIndex: 'status',
@@ -58,41 +71,17 @@ export default function UsersTable({
     {
       title: 'Actions',
       key: 'actions',
-      width: 200,
+      width: 140,
       render: (_, record) => (
         <div className="flex items-center gap-2">
-          {/* <IconAction
-            label={`Edit ${record.name}`}
-            onClick={() => onEdit(record)}
-            className="text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
-          >
-            <Pencil size={16} />
-          </IconAction> */}
-
-          <IconAction
-            label={`View ${record.name}`}
+          <button
+            type="button"
+            aria-label={`View ${record.name}`}
             onClick={() => onView(record)}
-            className="text-sky-400 hover:bg-sky-500/10 hover:text-sky-300"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-sky-400 transition-colors hover:bg-sky-500/10 hover:text-sky-300"
           >
             <Eye size={16} />
-          </IconAction>
-
-          {/* <Popconfirm
-            title="Delete user"
-            description={`Permanently remove ${record.name}?`}
-            okText="Delete"
-            cancelText="Cancel"
-            okButtonProps={{ danger: true }}
-            onConfirm={() => onDelete(record.key)}
-          >
-            <button
-              type="button"
-              aria-label={`Delete ${record.name}`}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
-            >
-              <Trash2 size={16} />
-            </button>
-          </Popconfirm> */}
+          </button>
 
           <Switch
             size="small"
@@ -108,32 +97,9 @@ export default function UsersTable({
     <Table<User>
       columns={columns}
       dataSource={data}
+      loading={loading}
       className="dashboard-table"
-      pagination={{
-        pageSize,
-        showSizeChanger: false,
-        hideOnSinglePage: false,
-      }}
+      pagination={pagination}
     />
-  )
-}
-
-type IconActionProps = {
-  label: string
-  onClick: () => void
-  className?: string
-  children: React.ReactNode
-}
-
-function IconAction({ label, onClick, className = '', children }: IconActionProps) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${className}`}
-    >
-      {children}
-    </button>
   )
 }

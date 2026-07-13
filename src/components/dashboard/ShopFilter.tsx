@@ -3,11 +3,17 @@ import { Popover } from 'antd'
 import { ChevronDown, Filter } from 'lucide-react'
 import { SHOP_STATUSES, type ShopStatus } from './shopData'
 
+export type ShopFilterStatus = Exclude<ShopStatus, 'All'>
+
 export type FilterState = {
-  status: ShopStatus | null
+  status: ShopFilterStatus | null
 }
 
 export const EMPTY_FILTER: FilterState = { status: null }
+
+const FILTER_STATUSES = SHOP_STATUSES.filter(
+  (status): status is ShopFilterStatus => status !== 'All',
+)
 
 type Props = {
   value: FilterState
@@ -17,7 +23,7 @@ type Props = {
 export default function ShopFilter({ value, onChange }: Props) {
   const [open, setOpen] = useState(false)
 
-  const selectStatus = (status: ShopStatus) => {
+  const selectStatus = (status: ShopFilterStatus) => {
     onChange({
       status: value.status === status ? null : status,
     })
@@ -38,7 +44,7 @@ export default function ShopFilter({ value, onChange }: Props) {
       content={
         <div className="w-64 space-y-4 p-1">
           <FilterGroup label="Status">
-            {SHOP_STATUSES.map((status) => (
+            {FILTER_STATUSES.map((status) => (
               <CheckboxPill
                 key={status}
                 label={status}

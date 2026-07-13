@@ -1,62 +1,57 @@
 import { useMemo, useState } from 'react'
 import { message, Spin } from 'antd'
-import { Search } from 'lucide-react'
+import SearchInput from '../../components/common/SearchInput'
 import UsersTable from '../../components/dashboard/UsersTable'
 import UserDetailsModal from '../../components/dashboard/UserDetailsModal'
-import EditUserModal from '../../components/dashboard/EditUserModal'
 import UserFilter, {
   EMPTY_USER_FILTER,
   type UserFilterState,
 } from '../../components/dashboard/UserFilter'
+import { useDebouncedSearch } from '../../hooks/useDebouncedSearch'
 import { type User } from '../../data/userData'
 import {
   mapUserFromApi,
+  USER_STATUS_TO_API,
   useGetUsersQuery,
   useUpdateUserStatusMutation,
 } from '../../redux/api/userApi'
 
-function filterUsers(
-  users: User[],
-  query: string,
-  activeFilter: UserFilterState,
-) {
-  return users.filter((user) => {
-    if (query) {
-      const haystack = `${user.name} ${user.email}`.toLowerCase()
-      if (!haystack.includes(query)) return false
-    }
-    if (
-      activeFilter.statuses.length &&
-      !activeFilter.statuses.includes(user.status)
-    ) {
-      return false
-    }
-    if (activeFilter.activeOnly && !user.active) return false
-    return true
-  })
-}
+const PAGE_SIZE = 10
 
 export default function UserManagement() {
-  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
   const [filter, setFilter] = useState<UserFilterState>(EMPTY_USER_FILTER)
   const [viewing, setViewing] = useState<User | null>(null)
-  const [editing, setEditing] = useState<User | null>(null)
 
-  const { data, isLoading, isError } = useGetUsersQuery(undefined)
+  const { value: query, setValue: setQuery, searchTerm } = useDebouncedSearch({
+    delay: 400,
+    onSearchTermChange: () => setPage(1),
+  })
+
+  const statusParam = filter.status
+    ? USER_STATUS_TO_API[filter.status]
+    : undefined
+
+  const { data, isLoading, isError, isFetching } = useGetUsersQuery({
+    page,
+    limit: PAGE_SIZE,
+    ...(searchTerm ? { searchTerm } : {}),
+    ...(statusParam ? { status: statusParam } : {}),
+  })
   const [updateUserStatus] = useUpdateUserStatusMutation()
 
-  const users = useMemo(
-    () => (data?.data ?? []).map(mapUserFromApi),
-    [data],
-  )
+  const users = useMemo(() => {
+    const pageOffset = ((data?.pagination.page ?? page) - 1) * PAGE_SIZE
+    return (data?.data ?? []).map((doc, index) =>
+      mapUserFromApi(doc, pageOffset + index),
+    )
+  }, [data, page])
 
-  const filtered = useMemo(
-    () => filterUsers(users, query.trim().toLowerCase(), filter),
-    [users, query, filter],
-  )
+  const pagination = data?.pagination
 
-  const handleDelete = (_key: string) => {
-    message.info('Delete user is not available yet.')
+  const handleFilterChange = (next: UserFilterState) => {
+    setFilter(next)
+    setPage(1)
   }
 
   const handleToggleActive = async (key: string, next: boolean) => {
@@ -73,10 +68,6 @@ export default function UserManagement() {
     }
   }
 
-  const handleSave = (_key: string, _patch: Partial<User>) => {
-    message.info('Edit user is not available yet.')
-  }
-
   return (
     <div className="py-6">
       <section className="rounded-2xl border border-surface-border bg-surface-card p-6">
@@ -84,20 +75,12 @@ export default function UserManagement() {
           <h1 className="text-xl font-semibold text-white">User Management</h1>
 
           <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
-            <div className="relative w-full max-w-sm">
-              <Search
-                size={16}
-                className="pointer-events-none absolute inset-y-0 left-3 my-auto text-gray-400"
-              />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name Or E-mail.."
-                className="h-10 w-full rounded-md border border-surface-border bg-transparent pl-9 pr-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-brand"
-              />
-            </div>
-            <UserFilter value={filter} onChange={setFilter} />
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="Search name Or E-mail.."
+            />
+            <UserFilter value={filter} onChange={handleFilterChange} />
           </div>
         </header>
 
@@ -112,11 +95,18 @@ export default function UserManagement() {
             </p>
           ) : (
             <UsersTable
-              data={filtered}
-              onEdit={setEditing}
+              data={users}
+              loading={isFetching}
               onView={setViewing}
-              onDelete={handleDelete}
               onToggleActive={handleToggleActive}
+              pagination={{
+                current: pagination?.page ?? page,
+                pageSize: pagination?.limit ?? PAGE_SIZE,
+                total: pagination?.total ?? 0,
+                showSizeChanger: false,
+                hideOnSinglePage: false,
+                onChange: (nextPage) => setPage(nextPage),
+              }}
             />
           )}
         </div>
@@ -126,13 +116,6 @@ export default function UserManagement() {
         user={viewing}
         open={viewing !== null}
         onClose={() => setViewing(null)}
-      />
-
-      <EditUserModal
-        user={editing}
-        open={editing !== null}
-        onClose={() => setEditing(null)}
-        onSave={handleSave}
       />
     </div>
   )
