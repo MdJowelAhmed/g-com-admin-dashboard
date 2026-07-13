@@ -3,7 +3,7 @@ import { Popover } from 'antd'
 import { ChevronDown, Filter } from 'lucide-react'
 import {
   API_PAYOUT_STATUSES,
-  PAYOUT_METHODS,
+  formatPayoutStatus,
 } from '../../redux/api/earningPayoutApi'
 import {
   EMPTY_PAYOUT_FILTER,
@@ -17,46 +17,23 @@ type Props = {
 
 export default function PayoutFilter({ value, onChange }: Props) {
   const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState<PayoutFilterState>(value)
 
-  const activeCount = value.statuses.length + value.methods.length
-
-  const toggleStatus = (status: string) =>
-    setDraft((prev) => ({
-      ...prev,
-      statuses: prev.statuses.includes(status)
-        ? prev.statuses.filter((item) => item !== status)
-        : [...prev.statuses, status],
-    }))
-
-  const toggleMethod = (method: string) =>
-    setDraft((prev) => ({
-      ...prev,
-      methods: prev.methods.includes(method)
-        ? prev.methods.filter((item) => item !== method)
-        : [...prev.methods, method],
-    }))
-
-  const apply = () => {
-    onChange(draft)
+  const selectStatus = (status: string) => {
+    onChange({
+      status: value.status === status ? null : status,
+    })
     setOpen(false)
   }
 
   const clear = () => {
-    setDraft(EMPTY_PAYOUT_FILTER)
     onChange(EMPTY_PAYOUT_FILTER)
     setOpen(false)
-  }
-
-  const onOpenChange = (next: boolean) => {
-    if (next) setDraft(value)
-    setOpen(next)
   }
 
   return (
     <Popover
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={setOpen}
       trigger="click"
       placement="bottomRight"
       content={
@@ -65,38 +42,20 @@ export default function PayoutFilter({ value, onChange }: Props) {
             {API_PAYOUT_STATUSES.map((status) => (
               <CheckboxPill
                 key={status}
-                label={status.charAt(0).toUpperCase() + status.slice(1)}
-                checked={draft.statuses.includes(status)}
-                onChange={() => toggleStatus(status)}
+                label={formatPayoutStatus(status)}
+                checked={value.status === status}
+                onChange={() => selectStatus(status)}
               />
             ))}
           </FilterGroup>
 
-          <FilterGroup label="Payment Method">
-            {PAYOUT_METHODS.map((method) => (
-              <CheckboxPill
-                key={method}
-                label={method}
-                checked={draft.methods.includes(method)}
-                onChange={() => toggleMethod(method)}
-              />
-            ))}
-          </FilterGroup>
-
-          <div className="flex items-center justify-end gap-2 border-t border-surface-border pt-3">
+          <div className="flex items-center justify-end border-t border-surface-border pt-3">
             <button
               type="button"
               onClick={clear}
               className="h-8 rounded-md px-3 text-xs font-medium text-gray-300 hover:text-white"
             >
               Reset
-            </button>
-            <button
-              type="button"
-              onClick={apply}
-              className="h-8 rounded-md bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover"
-            >
-              Apply
             </button>
           </div>
         </div>
@@ -108,9 +67,9 @@ export default function PayoutFilter({ value, onChange }: Props) {
       >
         <Filter size={15} />
         Filter
-        {activeCount > 0 && (
+        {value.status && (
           <span className="rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-semibold">
-            {activeCount}
+            1
           </span>
         )}
         <ChevronDown size={15} />
@@ -154,21 +113,11 @@ function CheckboxPill({ label, checked, onChange }: CheckboxPillProps) {
     >
       <span>{label}</span>
       <span
-        className={`flex h-4 w-4 items-center justify-center rounded border ${
+        className={`flex h-4 w-4 items-center justify-center rounded-full border ${
           checked ? 'border-brand bg-brand' : 'border-surface-border'
         }`}
       >
-        {checked && (
-          <svg viewBox="0 0 16 16" className="h-3 w-3 text-white" fill="none">
-            <path
-              d="M3 8l3 3 7-7"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        )}
+        {checked && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
       </span>
     </button>
   )

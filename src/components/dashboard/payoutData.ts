@@ -1,9 +1,7 @@
 export type PayoutFilterState = {
-  statuses: string[]
-  methods: string[]
+  status: string | null
 }
 
 export const EMPTY_PAYOUT_FILTER: PayoutFilterState = {
-  statuses: [],
-  methods: [],
+  status: null,
 }

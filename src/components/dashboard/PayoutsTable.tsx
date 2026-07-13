@@ -1,5 +1,6 @@
 import { Table } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import { Eye } from 'lucide-react'
 import {
   formatPayoutStatus,
   type PayoutListItem,
@@ -17,12 +18,14 @@ type Props = {
   data: PayoutListItem[]
   loading?: boolean
   pagination?: TablePaginationConfig
+  onView: (payout: PayoutListItem) => void
 }
 
 export default function PayoutsTable({
   data,
   loading = false,
   pagination,
+  onView,
 }: Props) {
   const columns: ColumnsType<PayoutListItem> = [
     { title: 'SL', dataIndex: 'sl', key: 'sl', width: 72 },
@@ -43,6 +46,12 @@ export default function PayoutsTable({
       render: (value: number) => `GH₵${value.toLocaleString()}`,
     },
     {
+      title: 'Recipient',
+      dataIndex: 'recipientName',
+      key: 'recipientName',
+      render: (value: string | null) => value ?? '—',
+    },
+    {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
@@ -58,6 +67,21 @@ export default function PayoutsTable({
       title: 'Date',
       dataIndex: 'createdAt',
       key: 'createdAt',
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 90,
+      render: (_, record) => (
+        <button
+          type="button"
+          aria-label={`View ${record.clientReference}`}
+          onClick={() => onView(record)}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-sky-400 transition-colors hover:bg-sky-500/10 hover:text-sky-300"
+        >
+          <Eye size={16} />
+        </button>
+      ),
     },
   ]
 
