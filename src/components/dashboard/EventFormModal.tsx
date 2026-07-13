@@ -97,10 +97,50 @@ export default function EventFormModal({
     value: EventFormState[K],
   ) => setForm((prev) => ({ ...prev, [key]: value }))
 
+  const today = new Date().toISOString().slice(0, 10)
+  const endDateMin = form.startDate && form.startDate > today ? form.startDate : today
+
+  const handleStartDateChange = (nextStartDate: string) => {
+    setForm((prev) => ({
+      ...prev,
+      startDate: nextStartDate,
+      endDate:
+        prev.endDate && nextStartDate && prev.endDate < nextStartDate
+          ? ''
+          : prev.endDate,
+      registrationDeadline:
+        prev.registrationDeadline &&
+        nextStartDate &&
+        prev.registrationDeadline > nextStartDate
+          ? ''
+          : prev.registrationDeadline,
+    }))
+  }
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
 
     if (!imageFile && !form.image) return
+
+    if (form.startDate < today) {
+      message.error('Start date cannot be in the past.')
+      return
+    }
+
+    if (form.endDate < form.startDate) {
+      message.error('End date cannot be earlier than start date.')
+      return
+    }
+
+    if (
+      form.registrationDeadline < today ||
+      (form.startDate && form.registrationDeadline > form.startDate)
+    ) {
+      message.error(
+        'Registration deadline must be today or later, and on or before start date.',
+      )
+      return
+    }
 
     let imageUrl = form.image
 
@@ -206,7 +246,8 @@ export default function EventFormModal({
               <input
                 type="date"
                 value={form.startDate}
-                onChange={(e) => update('startDate', e.target.value)}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                min={today}
                 className={controlClass}
                 required
                 disabled={isBusy}
@@ -229,7 +270,7 @@ export default function EventFormModal({
                 type="date"
                 value={form.endDate}
                 onChange={(e) => update('endDate', e.target.value)}
-                min={form.startDate || undefined}
+                min={endDateMin}
                 className={controlClass}
                 required
                 disabled={isBusy}
@@ -254,6 +295,7 @@ export default function EventFormModal({
                 onChange={(e) =>
                   update('registrationDeadline', e.target.value)
                 }
+                min={today}
                 max={form.startDate || undefined}
                 className={controlClass}
                 required
