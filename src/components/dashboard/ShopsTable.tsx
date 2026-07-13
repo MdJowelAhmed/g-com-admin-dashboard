@@ -1,6 +1,10 @@
 import { Popconfirm, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { canReviewShop } from '../../redux/api/shopManagementApi'
+import { Check, X } from 'lucide-react'
+import {
+  canReviewShop,
+  hasVerificationDocuments,
+} from '../../redux/api/shopManagementApi'
 import type { Shop, ShopStatus } from './shopData'
 
 const statusStyles: Record<ShopStatus, string> = {
@@ -41,6 +45,28 @@ export default function ShopsTable({
     { title: 'Category', dataIndex: 'category', key: 'category' },
     { title: 'Joining Date', dataIndex: 'joiningDate', key: 'joiningDate' },
     {
+      title: 'Documents',
+      key: 'documents',
+      width: 110,
+      render: (_, record) => {
+        const hasDocs = hasVerificationDocuments(record)
+
+        return (
+          <span
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${
+              hasDocs
+                ? 'bg-emerald-500/15 text-emerald-400'
+                : 'bg-red-500/15 text-red-400'
+            }`}
+            title={hasDocs ? 'Documents submitted' : 'No documents'}
+            aria-label={hasDocs ? 'Documents submitted' : 'No documents'}
+          >
+            {hasDocs ? <Check size={16} /> : <X size={16} />}
+          </span>
+        )
+      },
+    },
+    {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
@@ -55,6 +81,7 @@ export default function ShopsTable({
       key: 'actions',
       width: 300,
       render: (_, record) => {
+        // Requires verification docs + pending status conditions
         const showApprovalActions = canReviewShop(record)
 
         return (

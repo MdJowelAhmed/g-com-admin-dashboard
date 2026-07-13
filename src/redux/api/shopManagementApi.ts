@@ -89,6 +89,7 @@ export interface ShopMutationResponse {
 
 const CATEGORY_LABELS: Record<string, string> = {
   shop: 'Shop',
+  dine: 'Dine',
   services: 'Services',
   stay: 'Stay',
   event: 'Event',
@@ -119,13 +120,20 @@ function getShopStatus(doc: BusinessApiDoc): ShopStatus {
   return 'Pending'
 }
 
+export function hasVerificationDocuments(
+  shop: Pick<Shop, 'verification'>,
+): boolean {
+  return (shop.verification ?? []).length > 0
+}
+
 export function canReviewShop(
   shop: Pick<Shop, 'isBusinessVerified' | 'verification'>,
 ): boolean {
   if (shop.isBusinessVerified) return false
 
   const verifications = shop.verification ?? []
-  if (verifications.length === 0) return true
+  // Approve/Reject only when verification documents exist
+  if (verifications.length === 0) return false
 
   const latest = verifications[verifications.length - 1]
   if (latest.status === 'rejected' || latest.status === 'approved') {
