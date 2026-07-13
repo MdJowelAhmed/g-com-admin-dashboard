@@ -1,7 +1,6 @@
 import { Package, Store, TrendingUp, Users } from 'lucide-react'
 import StatCard from '../../components/dashboard/StatCard'
 import RevenueChart from '../../components/dashboard/RevenueChart'
-import VerificationQueue from '../../components/dashboard/VerificationQueue'
 import RecentOrdersTable from '../../components/dashboard/RecentOrdersTable'
 import { useGetOverviewStatsQuery } from '../../redux/api/overviewApi'
 

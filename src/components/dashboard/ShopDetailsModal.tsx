@@ -11,6 +11,7 @@ const statusStyles: Record<ShopStatus, string> = {
   Verified: 'text-emerald-400',
   'In Review': 'text-sky-400',
   Suspended: 'text-red-400',
+  All: 'text-gray-400',
 }
 
 const verificationStatusStyles: Record<ShopVerification['status'], string> = {
