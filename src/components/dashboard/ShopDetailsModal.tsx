@@ -1,8 +1,10 @@
-import { Modal } from 'antd'
+import { useState } from 'react'
+import { message, Modal } from 'antd'
 import { ExternalLink, Store } from 'lucide-react'
 import {
   canReviewShop,
   resolveMediaUrl,
+  useLazyGetverificationProofQuery,
 } from '../../redux/api/shopManagementApi'
 import type { Shop, ShopStatus, ShopVerification } from './shopData'
 
@@ -146,7 +148,35 @@ export default function ShopDetailsModal({
 }
 
 function VerificationCard({ verification }: { verification: ShopVerification }) {
-  const isPdf = verification.verificationDocument.toLowerCase().endsWith('.pdf')
+  const [fetchProof] = useLazyGetverificationProofQuery()
+  const [loadingType, setLoadingType] = useState<'businessProof' | 'document' | null>(
+    null,
+  )
+
+  const openDocument = async (kind: 'businessProof' | 'document') => {
+    setLoadingType(kind)
+    try {
+      const result = await fetchProof(
+        kind === 'businessProof'
+          ? { id: verification.id, type: 'businessProof' }
+          : { id: verification.id },
+      ).unwrap()
+
+      const url = result.data?.url
+      if (!url) {
+        message.error('Document URL was not returned.')
+        return
+      }
+
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to load document.'
+      message.error(errorMessage)
+    } finally {
+      setLoadingType(null)
+    }
+  }
 
   return (
     <div className="rounded-lg border border-surface-border bg-surface-elevated/40 p-4">
@@ -161,69 +191,34 @@ function VerificationCard({ verification }: { verification: ShopVerification }) 
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <DocumentPreview
-          label="Business Proof"
-          url={resolveMediaUrl(verification.businessProof)}
-        />
-        <DocumentPreview
-          label="Verification Document"
-          url={resolveMediaUrl(verification.verificationDocument)}
-          isPdf={isPdf}
-        />
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => openDocument('businessProof')}
+          disabled={loadingType !== null}
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-brand px-4 text-sm font-medium text-brand-hover transition-colors hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <ExternalLink size={14} />
+          {loadingType === 'businessProof'
+            ? 'Loading…'
+            : 'View Business Proof'}
+        </button>
+        <button
+          type="button"
+          onClick={() => openDocument('document')}
+          disabled={loadingType !== null}
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-brand px-4 text-sm font-medium text-brand-hover transition-colors hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <ExternalLink size={14} />
+          {loadingType === 'document'
+            ? 'Loading…'
+            : 'View Verification Document'}
+        </button>
       </div>
 
       <div className="mt-3 text-xs text-gray-400">
         Submitted {new Date(verification.createdAt).toLocaleString()}
       </div>
-    </div>
-  )
-}
-
-function DocumentPreview({
-  label,
-  url,
-  isPdf = false,
-}: {
-  label: string
-  url: string
-  isPdf?: boolean
-}) {
-  if (!url) {
-    return (
-      <div>
-        <div className="mb-2 text-xs uppercase tracking-wide text-gray-400">
-          {label}
-        </div>
-        <p className="text-sm text-gray-500">Not provided</p>
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      <div className="mb-2 text-xs uppercase tracking-wide text-gray-400">
-        {label}
-      </div>
-      {isPdf ? (
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded-md border border-brand px-3 py-2 text-sm text-brand-hover transition-colors hover:bg-brand/10"
-        >
-          <ExternalLink size={14} />
-          View PDF
-        </a>
-      ) : (
-        <a href={url} target="_blank" rel="noreferrer" className="block">
-          <img
-            src={url}
-            alt={label}
-            className="h-36 w-full rounded-md border border-surface-border object-cover"
-          />
-        </a>
-      )}
     </div>
   )
 }

@@ -97,6 +97,19 @@ export interface ShopMutationResponse {
   data?: BusinessApiDoc
 }
 
+export interface VerificationProofResponse {
+  success: boolean
+  message: string
+  data: {
+    url: string
+  }
+}
+
+export type VerificationProofParams = {
+  id: string
+  type?: 'businessProof'
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   shop: 'Shop',
   dine: 'Dine',
@@ -214,8 +227,22 @@ const shopManagementApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Shops'],
     }),
+
+    getverificationProof: builder.query<
+      VerificationProofResponse,
+      VerificationProofParams
+    >({
+      query: ({ id, type }) => ({
+        url: `/business-verifications/admin/verifications/${id}/document`,
+        method: 'GET',
+        ...(type ? { params: { type } } : {}),
+      }),
+    }),
   }),
 })
 
-export const { useGetShopsQuery, useUpdateShopStatusMutation } =
-  shopManagementApi
+export const {
+  useGetShopsQuery,
+  useUpdateShopStatusMutation,
+  useLazyGetverificationProofQuery,
+} = shopManagementApi
