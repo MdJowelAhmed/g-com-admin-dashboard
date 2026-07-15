@@ -74,7 +74,7 @@ export default function EventsTable({
       title: 'Total Revenue',
       key: 'revenue',
       render: (_, record) =>
-        `$${revenueOf(record).toLocaleString('en-US', {
+        `GH₵${revenueOf(record).toLocaleString('en-US', {
           maximumFractionDigits: 0,
         })}`,
     },

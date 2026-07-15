@@ -62,7 +62,7 @@ export default function OrderDetailsModal({ order, open, onClose }: Props) {
             <DetailRow label="Date" value={order.date} />
             <DetailRow label="Time" value={order.time} />
             <DetailRow label="Item Number" value={`${order.items} Items`} />
-            <DetailRow label="Amount" value={`$${order.amount}`} />
+            <DetailRow label="Amount" value={`GH₵${order.amount}`} />
           </dl>
 
           <div>

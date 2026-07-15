@@ -58,7 +58,7 @@ export default function RecentOrdersTable() {
       title: 'Amount',
       dataIndex: 'totalAmount',
       key: 'totalAmount',
-      render: (amount: number) => `₵${amount.toLocaleString()}`,
+      render: (amount: number) => `GH₵${amount.toLocaleString()}`,
     },
     {
       title: 'Payment',

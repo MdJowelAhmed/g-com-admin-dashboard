@@ -63,11 +63,11 @@ export default function EventDetailsModal({ event, open, onClose }: Props) {
             />
             <DetailRow
               label="Ticket Price"
-              value={`$${event.ticketPrice.toFixed(2)}`}
+              value={`GH₵${event.ticketPrice.toFixed(2)}`}
             />
             <DetailRow
               label="Revenue"
-              value={`$${revenueOf(event).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
+              value={`GH₵${revenueOf(event).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
             />
             <DetailRow label="Check-ins" value={event.checkIns.toLocaleString()} />
             <DetailRow

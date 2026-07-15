@@ -70,7 +70,7 @@ const baseColumns: ColumnsType<Promotion> = [
     title: 'Amount',
     dataIndex: 'amount',
     key: 'amount',
-    render: (amount: number) => `$${amount}`,
+    render: (amount: number) => `GH₵${amount}`,
   },
   {
     title: 'Status',

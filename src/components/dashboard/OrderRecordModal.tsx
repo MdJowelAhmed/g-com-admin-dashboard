@@ -296,7 +296,7 @@ function CustomLineItems({ items }: { items: CustomLineItem[] }) {
 
 function formatMoney(value?: number) {
   if (value == null) return '—'
-  return `₵${value.toLocaleString()}`
+  return `GH₵${value.toLocaleString()}`
 }
 
 function formatDate(iso: string) {

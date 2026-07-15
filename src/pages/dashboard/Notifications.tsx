@@ -3,10 +3,10 @@ import { Spin } from 'antd'
 import {
   Bell,
   CheckCheck,
-  DollarSign,
   Package,
   Settings,
   UserPlus,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -40,7 +40,7 @@ const typeMeta: Record<
     label: 'Order',
   },
   payment: {
-    icon: DollarSign,
+    icon: Wallet,
     tone: 'bg-emerald-500/20 text-emerald-300',
     label: 'Payment',
   },

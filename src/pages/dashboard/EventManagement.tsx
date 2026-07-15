@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { message, Spin } from 'antd'
-import { DollarSign, Plus, Search, TicketCheck, Users } from 'lucide-react'
+import { Plus, Search, TicketCheck, Users, Wallet } from 'lucide-react'
 import StatCard from '../../components/dashboard/StatCard'
 import EventsTable from '../../components/dashboard/EventsTable'
 import EventFormModal from '../../components/dashboard/EventFormModal'
@@ -144,7 +144,7 @@ export default function EventManagement() {
   return (
     <div className="py-6">
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard label="Total Sales" value={formatMoney(totals.sales)} icon={DollarSign} />
+        <StatCard label="Total Sales" value={formatMoney(totals.sales)} icon={Wallet} />
         <StatCard
           label="App Ticket Sales"
           value={totals.tickets.toLocaleString()}

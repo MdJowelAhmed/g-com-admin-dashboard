@@ -75,7 +75,7 @@ export default function OrdersTable({
       title: 'Amount',
       dataIndex: 'totalAmount',
       key: 'totalAmount',
-      render: (v: number) => `₵${v.toLocaleString()}`,
+      render: (v: number) => `GH₵${v.toLocaleString()}`,
     },
     {
       title: 'Status',

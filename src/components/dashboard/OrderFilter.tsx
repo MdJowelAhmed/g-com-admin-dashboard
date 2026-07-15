@@ -83,7 +83,7 @@ export default function OrderFilter({ value, onChange }: Props) {
 
           <div className="border-t border-surface-border pt-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Amount range (₵)
+              Amount range (GH₵)
             </div>
             <div className="flex items-center gap-2">
               <input

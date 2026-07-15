@@ -362,7 +362,7 @@ export default function EventFormModal({
             <div className="mt-6 rounded-md border border-surface-border bg-surface-elevated/60 px-4 py-3 text-xs text-gray-300">
               Revenue potential at full capacity:{' '}
               <span className="font-semibold text-white">
-                ${revenuePotential.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                GH₵{revenuePotential.toLocaleString('en-US', { maximumFractionDigits: 2 })}
               </span>
             </div>
           )}
