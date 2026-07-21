@@ -16,7 +16,9 @@ export function useNotificationSocket() {
 
         const socket = io(socketUrl, {
             auth: { token: `Bearer ${token}` },
-            transports: ['websocket', 'polling'],
+            // Start with HTTP long-polling, then upgrade to websocket.
+            // This avoids premature websocket-close issues behind some proxies.
+            transports: ['polling', 'websocket'],
             autoConnect: true,
         })
 
