@@ -20,4 +20,5 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
   },
+  preview: {     port: 4173,     allowedHosts: ['admin.gcomapp.com'],   },
 })
